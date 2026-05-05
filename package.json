@@ -5,6 +5,7 @@
   "description": "Plateforme tactile hôtelière unifiée — projet inspiré de l'écosystème Dymension (KioskInfo + Delyss + Expressyon)",
   "author": "Candidature alternance Dymension",
   "license": "UNLICENSED",
+  "packageManager": "pnpm@9.10.0",
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
