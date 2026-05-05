@@ -1,13 +1,13 @@
 # Render Blueprint — déploie les 6 services backend
 # https://render.com/docs/blueprint-spec
-#
-# Sync : Render dashboard → Blueprint Concierge → "Manual Sync"
 
 envVarGroups:
   - name: concierge-shared
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 20.18.0
       - key: MONGO_URI
         value: mongodb+srv://alessandronetstrategy_db_user:FPbaVlM9BJzq6PNj@cluster0.dhduoky.mongodb.net/concierge?retryWrites=true&w=majority&appName=Cluster0
       - key: JWT_SECRET
@@ -16,13 +16,12 @@ envVarGroups:
         generateValue: true
 
 services:
-  # ───────── API Gateway ─────────
   - type: web
     name: concierge-gateway
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter api-gateway build
+    buildCommand: npm install -g pnpm@9.10.0 && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter api-gateway build
     startCommand: cd apps/api-gateway && node dist/main.js
     healthCheckPath: /health
     envVars:
@@ -40,13 +39,12 @@ services:
       - key: SERVICE_SURVEY_URL
         fromService: { type: web, name: concierge-survey, property: hostport }
 
-  # ───────── auth-service ─────────
   - type: web
     name: concierge-auth
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter auth-service build
+    buildCommand: npm install -g pnpm@9.10.0 && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter auth-service build
     startCommand: cd services/auth-service && node dist/main.js
     healthCheckPath: /auth/health
     envVars:
@@ -54,52 +52,48 @@ services:
       - key: PORT
         value: 10000
 
-  # ───────── tenant-service ─────────
   - type: web
     name: concierge-tenant
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter tenant-service build
+    buildCommand: npm install -g pnpm@9.10.0 && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter tenant-service build
     startCommand: cd services/tenant-service && node dist/main.js
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
         value: 10000
 
-  # ───────── content-service ─────────
   - type: web
     name: concierge-content
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter content-service build
+    buildCommand: npm install -g pnpm@9.10.0 && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter content-service build
     startCommand: cd services/content-service && node dist/main.js
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
         value: 10000
 
-  # ───────── orders-service ─────────
   - type: web
     name: concierge-orders
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter orders-service build
+    buildCommand: npm install -g pnpm@9.10.0 && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter orders-service build
     startCommand: cd services/orders-service && node dist/main.js
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
         value: 10000
 
-  # ───────── survey-service ─────────
   - type: web
     name: concierge-survey
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter survey-service build
+    buildCommand: npm install -g pnpm@9.10.0 && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter survey-service build
     startCommand: cd services/survey-service && node dist/main.js
     envVars:
       - fromGroup: concierge-shared
