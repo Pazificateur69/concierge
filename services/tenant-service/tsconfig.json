@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": false,
+    "skipLibCheck": true,
+    "paths": {
+      "@concierge/types": ["../../packages/types/dist/index.d.ts"],
+      "@concierge/nest-common": ["../../packages/nest-common/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "concierge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plateforme tactile hôtelière unifiée — projet inspiré de l'écosystème Dymension (KioskInfo + Delyss + Expressyon)",
+  "author": "Candidature alternance Dymension",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:back": "pnpm --filter \"./services/**\" --filter api-gateway --parallel run dev",
+    "dev:lobby": "pnpm --filter lobby-kiosk run dev",
+    "dev:smiley": "pnpm --filter smiley run dev",
+    "dev:admin": "pnpm --filter admin run dev",
+    "dev:reception": "pnpm --filter reception run dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f infra/docker/docker-compose.yml logs -f",
+    "seed": "pnpm --filter @concierge/seed run seed"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "prettier": "^3.3.3",
+    "eslint": "^9.9.0",
+    "@types/node": "^22.5.0"
+  }
+}

@@ -1,0 +1,15 @@
+import { createRouter, createWebHistory } from '@ionic/vue-router';
+import type { RouteRecordRaw } from 'vue-router';
+
+const routes: RouteRecordRaw[] = [
+  { path: '/', component: () => import('./views/HomeView.vue') },
+  { path: '/map', component: () => import('./views/MapView.vue') },
+  { path: '/services', component: () => import('./views/ServicesView.vue') },
+  { path: '/menu', component: () => import('./views/MenuView.vue') },
+  { path: '/help', component: () => import('./views/HelpView.vue') },
+];
+
+export const router = createRouter({
+  history: createWebHistory(),
+  routes,
+});

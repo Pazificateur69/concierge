@@ -1,0 +1,33 @@
+{
+  "name": "lobby-kiosk",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --port 4100 --host",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --port 4100 --host",
+    "lint": "eslint src --ext .ts,.vue",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@concierge/types": "workspace:*",
+    "@ionic/vue": "^8.3.0",
+    "@ionic/vue-router": "^8.3.0",
+    "axios": "^1.7.4",
+    "ionicons": "^7.4.0",
+    "leaflet": "^1.9.4",
+    "pinia": "^2.2.2",
+    "vue": "^3.5.0",
+    "vue-i18n": "^9.14.0",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.12",
+    "@vitejs/plugin-vue": "^5.1.2",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2",
+    "vite-plugin-pwa": "^0.20.5",
+    "vitest": "^2.0.5",
+    "vue-tsc": "^2.1.0"
+  }
+}

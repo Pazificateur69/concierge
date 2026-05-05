@@ -1,0 +1,126 @@
+# Infrastructure as Code pour Render — déploie tous les microservices + gateway
+# https://render.com/docs/blueprint-spec
+
+services:
+  # ───────── API Gateway ─────────
+  - type: web
+    name: concierge-gateway
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: apps/api-gateway
+    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter api-gateway build
+    startCommand: node dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SERVICE_AUTH_URL
+        fromService: { type: web, name: concierge-auth, property: hostport }
+      - key: SERVICE_TENANT_URL
+        fromService: { type: web, name: concierge-tenant, property: hostport }
+      - key: SERVICE_CONTENT_URL
+        fromService: { type: web, name: concierge-content, property: hostport }
+      - key: SERVICE_ORDERS_URL
+        fromService: { type: web, name: concierge-orders, property: hostport }
+      - key: SERVICE_SURVEY_URL
+        fromService: { type: web, name: concierge-survey, property: hostport }
+
+  # ───────── auth-service ─────────
+  - type: web
+    name: concierge-auth
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: services/auth-service
+    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter auth-service build
+    startCommand: node dist/main.js
+    healthCheckPath: /auth/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+
+  # ───────── tenant-service ─────────
+  - type: web
+    name: concierge-tenant
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: services/tenant-service
+    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter tenant-service build
+    startCommand: node dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # ───────── content-service ─────────
+  - type: web
+    name: concierge-content
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: services/content-service
+    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter content-service build
+    startCommand: node dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # ───────── orders-service ─────────
+  - type: web
+    name: concierge-orders
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: services/orders-service
+    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter orders-service build
+    startCommand: node dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # ───────── survey-service ─────────
+  - type: web
+    name: concierge-survey
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: services/survey-service
+    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter survey-service build
+    startCommand: node dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false

@@ -1,0 +1,29 @@
+{
+  "name": "smiley",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --port 4200 --host",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --port 4200 --host",
+    "lint": "eslint src --ext .ts,.vue"
+  },
+  "dependencies": {
+    "@concierge/types": "workspace:*",
+    "@ionic/vue": "^8.3.0",
+    "@ionic/vue-router": "^8.3.0",
+    "axios": "^1.7.4",
+    "ionicons": "^7.4.0",
+    "pinia": "^2.2.2",
+    "vue": "^3.5.0",
+    "vue-i18n": "^9.14.0",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.2",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2",
+    "vite-plugin-pwa": "^0.20.5",
+    "vue-tsc": "^2.1.0"
+  }
+}

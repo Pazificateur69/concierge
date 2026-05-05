@@ -1,0 +1,27 @@
+:root {
+  --c-primary: #1a4d8c;
+  --c-accent: #d4a85a;
+  --c-bg: #fafaf7;
+  --c-text: #1a1d24;
+  --c-font-display: 'Playfair Display', serif;
+  --c-font-body: 'Inter', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--c-font-body);
+  font-size: 18px;
+  color: var(--c-text);
+  background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button { font-family: inherit; }
+
+/* Disable browser context menu / long-press in kiosk */
+* { -webkit-touch-callout: none; }

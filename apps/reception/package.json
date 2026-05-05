@@ -1,0 +1,33 @@
+{
+  "name": "reception",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "ng serve --port 4400 --host 0.0.0.0",
+    "build": "ng build --configuration production",
+    "lint": "ng lint",
+    "test": "ng test --watch=false --browsers=ChromeHeadless"
+  },
+  "dependencies": {
+    "@angular/animations": "^17.3.0",
+    "@angular/common": "^17.3.0",
+    "@angular/compiler": "^17.3.0",
+    "@angular/core": "^17.3.0",
+    "@angular/forms": "^17.3.0",
+    "@angular/platform-browser": "^17.3.0",
+    "@angular/platform-browser-dynamic": "^17.3.0",
+    "@angular/router": "^17.3.0",
+    "@concierge/types": "workspace:*",
+    "rxjs": "~7.8.0",
+    "socket.io-client": "^4.7.5",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.14.3"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^17.3.0",
+    "@angular/cli": "^17.3.0",
+    "@angular/compiler-cli": "^17.3.0",
+    "@types/node": "^22.5.0",
+    "typescript": "~5.4.0"
+  }
+}

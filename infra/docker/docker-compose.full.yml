@@ -1,0 +1,99 @@
+version: '3.9'
+
+# Stack complet : Mongo, Redis, tous les microservices, gateway.
+# Usage : docker compose -f infra/docker/docker-compose.full.yml up
+
+x-node-env: &node-env
+  NODE_ENV: production
+  MONGO_URI: mongodb://mongo:27017/concierge
+  REDIS_URL: redis://redis:6379
+  JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret}
+  CORS_ORIGINS: ${CORS_ORIGINS:-*}
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes: [mongo_data:/data/db]
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', 'db.runCommand({ ping: 1 })']
+      interval: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      <<: *node-env
+      PORT: 3001
+    depends_on:
+      mongo: { condition: service_healthy }
+
+  tenant-service:
+    build:
+      context: ../..
+      dockerfile: services/tenant-service/Dockerfile
+    environment:
+      <<: *node-env
+      PORT: 3007
+    depends_on:
+      mongo: { condition: service_healthy }
+
+  content-service:
+    build:
+      context: ../..
+      dockerfile: services/content-service/Dockerfile
+    environment:
+      <<: *node-env
+      PORT: 3002
+    depends_on:
+      mongo: { condition: service_healthy }
+
+  orders-service:
+    build:
+      context: ../..
+      dockerfile: services/orders-service/Dockerfile
+    environment:
+      <<: *node-env
+      PORT: 3003
+    depends_on:
+      mongo: { condition: service_healthy }
+
+  survey-service:
+    build:
+      context: ../..
+      dockerfile: services/survey-service/Dockerfile
+    environment:
+      <<: *node-env
+      PORT: 3004
+    depends_on:
+      mongo: { condition: service_healthy }
+
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: apps/api-gateway/Dockerfile
+    environment:
+      <<: *node-env
+      PORT: 3000
+      SERVICE_AUTH_URL: http://auth-service:3001
+      SERVICE_TENANT_URL: http://tenant-service:3007
+      SERVICE_CONTENT_URL: http://content-service:3002
+      SERVICE_ORDERS_URL: http://orders-service:3003
+      SERVICE_SURVEY_URL: http://survey-service:3004
+    ports:
+      - '3000:3000'
+    depends_on:
+      - auth-service
+      - tenant-service
+      - content-service
+      - orders-service
+      - survey-service
+
+volumes:
+  mongo_data:
