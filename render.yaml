@@ -21,7 +21,7 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install -g pnpm@9.10.0 && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter api-gateway build
+    buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter api-gateway build
     startCommand: cd apps/api-gateway && node dist/main.js
     healthCheckPath: /health
     envVars:
@@ -44,7 +44,7 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install -g pnpm@9.10.0 && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter auth-service build
+    buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter auth-service build
     startCommand: cd services/auth-service && node dist/main.js
     healthCheckPath: /auth/health
     envVars:
@@ -57,7 +57,7 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install -g pnpm@9.10.0 && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter tenant-service build
+    buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter tenant-service build
     startCommand: cd services/tenant-service && node dist/main.js
     envVars:
       - fromGroup: concierge-shared
@@ -69,7 +69,7 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install -g pnpm@9.10.0 && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter content-service build
+    buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter content-service build
     startCommand: cd services/content-service && node dist/main.js
     envVars:
       - fromGroup: concierge-shared
@@ -81,7 +81,7 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install -g pnpm@9.10.0 && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter orders-service build
+    buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter orders-service build
     startCommand: cd services/orders-service && node dist/main.js
     envVars:
       - fromGroup: concierge-shared
@@ -93,7 +93,7 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install -g pnpm@9.10.0 && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter survey-service build
+    buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter survey-service build
     startCommand: cd services/survey-service && node dist/main.js
     envVars:
       - fromGroup: concierge-shared
