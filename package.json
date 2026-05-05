@@ -26,7 +26,7 @@
     "seed": "pnpm --filter @concierge/seed run seed"
   },
   "devDependencies": {
-    "typescript": "^5.5.4",
+    "typescript": "5.5.4",
     "prettier": "^3.3.3",
     "eslint": "^9.9.0",
     "@types/node": "^22.5.0"
