@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonPage, IonContent } from '@ionic/vue';
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import L from 'leaflet';
 import KioskHeader from '../components/KioskHeader.vue';
 import { useTenantStore } from '../stores/tenant';
@@ -14,38 +14,61 @@ const tenantStore = useTenantStore();
 const voice = useVoiceStore();
 
 const pois = ref<Poi[]>([]);
+const loading = ref(true);
 const selected = ref<Poi | null>(null);
-const activeCategories = ref<Set<PoiCategory>>(new Set());
+const activeCategory = ref<PoiCategory | 'all'>('all');
 
-const allCategories: PoiCategory[] = ['restaurant', 'monument', 'museum', 'transport', 'shopping', 'park', 'bar', 'pharmacy'];
 const ICONS: Record<PoiCategory, string> = {
   restaurant: '🍽️', monument: '🏛️', museum: '🖼️',
   transport: '🚆', shopping: '🛍️', park: '🌳',
   bar: '🍷', pharmacy: '💊',
 };
 
+const COLORS: Record<PoiCategory, string> = {
+  restaurant: '#e76f51', monument: '#264653', museum: '#9b5de5',
+  transport: '#2a9d8f', shopping: '#f4a261', park: '#52b788',
+  bar: '#bc6c25', pharmacy: '#06d6a0',
+};
+
 let map: L.Map | null = null;
 const markerLayer = L.layerGroup();
+const markerById = new Map<string, L.Marker>();
+
+const filtered = computed(() =>
+  activeCategory.value === 'all' ? pois.value : pois.value.filter((p) => p.category === activeCategory.value),
+);
+
+const counts = computed(() => {
+  const out: Record<string, number> = { all: pois.value.length };
+  for (const p of pois.value) out[p.category] = (out[p.category] || 0) + 1;
+  return out;
+});
+
+const allCategories = computed(() =>
+  (Object.keys(ICONS) as PoiCategory[]).filter((c) => (counts.value[c] || 0) > 0),
+);
 
 onMounted(async () => {
   if (!tenantStore.tenant) return;
   voice.speak(i18n.t('map.title'), i18n.locale.value === 'fr' ? 'fr-FR' : 'en-US');
 
   const center: [number, number] = [
-    tenantStore.tenant.id === 'fallback' ? 45.7578 : 45.7578,
-    4.832,
+    tenantStore.tenant.contact?.lat ?? 45.7578,
+    tenantStore.tenant.contact?.lng ?? 4.832,
   ];
 
-  map = L.map('lobby-map', { zoomControl: true, attributionControl: false })
-    .setView(center, 14);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  map = L.map('lobby-map', { zoomControl: true, attributionControl: false }).setView(center, 14);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19, subdomains: 'abcd',
+  }).addTo(map);
   markerLayer.addTo(map);
 
+  // Hotel marker
   L.marker(center, {
     icon: L.divIcon({
       className: 'lm-hotel',
-      html: '<div style="background:var(--c-primary,#1a4d8c);color:white;padding:8px 12px;border-radius:24px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.2);">🏨 ' + (tenantStore.tenant?.name ?? 'Hotel') + '</div>',
-      iconSize: [200, 40], iconAnchor: [100, 20],
+      html: `<div class="hotel-pin"><span>🏨</span><span class="hotel-pin__name">${tenantStore.tenant?.name ?? 'Hotel'}</span></div>`,
+      iconSize: [220, 48], iconAnchor: [110, 48],
     }),
   }).addTo(map);
 
@@ -55,36 +78,44 @@ onMounted(async () => {
     refreshMarkers();
   } catch (e) {
     console.error(e);
+  } finally {
+    loading.value = false;
   }
 });
 
-function toggleCategory(c: PoiCategory) {
-  if (activeCategories.value.has(c)) activeCategories.value.delete(c);
-  else activeCategories.value.add(c);
+function selectCategory(cat: PoiCategory | 'all') {
+  activeCategory.value = cat;
   refreshMarkers();
 }
 
 function refreshMarkers() {
   if (!map) return;
   markerLayer.clearLayers();
-  const filtered = activeCategories.value.size === 0
-    ? pois.value
-    : pois.value.filter((p) => activeCategories.value.has(p.category));
-  for (const poi of filtered) {
+  markerById.clear();
+  for (const poi of filtered.value) {
+    const color = COLORS[poi.category];
     const m = L.marker([poi.lat, poi.lng], {
       icon: L.divIcon({
         className: 'lm-poi',
-        html: `<div style="background:white;padding:8px;border-radius:50%;font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">${ICONS[poi.category]}</div>`,
-        iconSize: [40, 40], iconAnchor: [20, 20],
+        html: `<div class="poi-pin" style="--c:${color}"><span>${ICONS[poi.category]}</span></div>`,
+        iconSize: [44, 44], iconAnchor: [22, 22],
       }),
     });
-    m.on('click', () => {
-      selected.value = poi;
-      const name = (poi.name as any).fr || Object.values(poi.name)[0];
-      voice.speak(name, i18n.locale.value === 'fr' ? 'fr-FR' : 'en-US');
-    });
+    m.on('click', () => selectPoi(poi));
     m.addTo(markerLayer);
+    markerById.set(poi.id, m);
   }
+}
+
+function selectPoi(p: Poi) {
+  selected.value = p;
+  const name = (p.name as any)[i18n.locale.value] || (p.name as any).fr || Object.values(p.name)[0];
+  voice.speak(name, i18n.locale.value === 'fr' ? 'fr-FR' : 'en-US');
+  if (map) map.flyTo([p.lat, p.lng], 16, { duration: 0.6 });
+}
+
+function poiName(p: Poi) {
+  return (p.name as any)[i18n.locale.value] || (p.name as any).fr || Object.values(p.name)[0];
 }
 
 watch(() => i18n.locale.value, refreshMarkers);
@@ -95,27 +126,64 @@ watch(() => i18n.locale.value, refreshMarkers);
     <KioskHeader :title="$t('map.title')" />
     <ion-content :fullscreen="true">
       <div class="mapview">
-        <div id="lobby-map" class="mapview__map"></div>
+        <div class="mapview__map-wrap">
+          <div id="lobby-map" class="mapview__map"></div>
+          <div v-if="loading" class="mapview__loading">
+            <div class="spinner"></div>
+            <p>Chargement de la carte…</p>
+          </div>
+        </div>
+
         <aside class="mapview__side">
-          <h3>{{ $t('map.filters') }}</h3>
-          <div class="mapview__filters">
+          <div class="mapview__head">
+            <div>
+              <h2 class="font-display">{{ $t('map.title') }}</h2>
+              <p>{{ $t('map.subtitle') }}</p>
+            </div>
+            <div class="mapview__count">{{ filtered.length }}</div>
+          </div>
+
+          <!-- Categories -->
+          <div class="cat-list">
+            <button class="cat-chip" :class="{ active: activeCategory === 'all' }" @click="selectCategory('all')">
+              <span class="cat-chip__icon">📍</span>
+              <span class="cat-chip__label">{{ $t('map.showAll') }}</span>
+              <span class="cat-chip__count">{{ counts.all }}</span>
+            </button>
             <button
               v-for="cat in allCategories"
               :key="cat"
-              class="mapview__chip"
-              :class="{ active: activeCategories.has(cat) }"
-              @click="toggleCategory(cat)"
+              class="cat-chip"
+              :class="{ active: activeCategory === cat }"
+              :style="{ '--cat-color': COLORS[cat] }"
+              @click="selectCategory(cat)"
             >
-              {{ ICONS[cat] }} {{ $t(`map.categories.${cat}`) || cat }}
+              <span class="cat-chip__icon">{{ ICONS[cat] }}</span>
+              <span class="cat-chip__label">{{ $t(`map.categories.${cat}`) || cat }}</span>
+              <span class="cat-chip__count">{{ counts[cat] || 0 }}</span>
             </button>
           </div>
 
-          <div v-if="selected" class="mapview__detail">
-            <h4>{{ (selected.name as any)[$i18n.locale] || (selected.name as any).fr }}</h4>
-            <p v-if="selected.rating">⭐ {{ selected.rating }} / 5</p>
-            <p v-if="selected.hours"><strong>🕒</strong> {{ selected.hours }}</p>
-            <p v-if="selected.phone"><strong>📞</strong> {{ selected.phone }}</p>
-            <button class="mapview__cta">{{ $t('map.itinerary') }} →</button>
+          <!-- POI list -->
+          <div class="poi-list">
+            <button
+              v-for="p in filtered"
+              :key="p.id"
+              class="poi-item"
+              :class="{ selected: selected?.id === p.id }"
+              :style="{ '--cat-color': COLORS[p.category] }"
+              @click="selectPoi(p)"
+            >
+              <span class="poi-item__icon">{{ ICONS[p.category] }}</span>
+              <span class="poi-item__body">
+                <span class="poi-item__name">{{ poiName(p) }}</span>
+                <span class="poi-item__meta">
+                  <span v-if="p.rating">⭐ {{ p.rating }}</span>
+                  <span v-if="p.distanceMeters">· {{ Math.round(p.distanceMeters) }}m</span>
+                </span>
+              </span>
+            </button>
+            <div v-if="!filtered.length && !loading" class="poi-empty">{{ $t('map.empty') }}</div>
           </div>
         </aside>
       </div>
@@ -123,28 +191,131 @@ watch(() => i18n.locale.value, refreshMarkers);
   </ion-page>
 </template>
 
+<style>
+/* Map markers — global because Leaflet renders outside Vue scope */
+.hotel-pin {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--c-primary, #1a4d8c); color: white;
+  padding: 8px 14px; border-radius: 999px;
+  font-weight: 700; font-size: 14px;
+  box-shadow: 0 6px 16px rgba(13, 39, 72, 0.35);
+  white-space: nowrap;
+}
+.hotel-pin__name { font-family: 'Playfair Display', serif; }
+.poi-pin {
+  width: 44px; height: 44px;
+  background: white; border: 3px solid var(--c, #1a4d8c);
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+  transition: transform 0.2s ease;
+}
+.poi-pin:hover { transform: scale(1.15); }
+</style>
+
 <style scoped>
-.mapview { display: grid; grid-template-columns: 1fr 360px; height: calc(100vh - 80px); }
-.mapview__map { width: 100%; height: 100%; }
+.mapview {
+  display: grid; grid-template-columns: 1fr 400px;
+  height: calc(100vh - 80px);
+  background: var(--c-bg);
+}
+.mapview__map-wrap { position: relative; }
+.mapview__map { width: 100%; height: 100%; background: var(--c-bg-soft); }
+
+.mapview__loading {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-4); background: rgba(255,255,255,0.9);
+  color: var(--c-text-muted);
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--c-border-strong); border-top-color: var(--c-primary);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .mapview__side {
-  background: white; padding: 24px; overflow-y: auto;
-  border-left: 1px solid rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 16px;
+  background: var(--c-bg-card);
+  border-left: 1px solid var(--c-border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
 }
-.mapview__side h3, .mapview__side h4 {
-  font-family: var(--c-font-display, 'Playfair Display'), serif; margin: 0;
+
+.mapview__head {
+  padding: var(--s-6); border-bottom: 1px solid var(--c-border);
+  display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-4);
 }
-.mapview__filters { display: flex; flex-wrap: wrap; gap: 8px; }
-.mapview__chip {
-  padding: 12px 16px; border-radius: 24px; border: 2px solid rgba(0,0,0,0.08);
-  background: white; cursor: pointer; font-size: 14px; font-weight: 500;
-  min-height: 48px;
+.mapview__head h2 { margin: 0 0 4px; font-size: 22px; }
+.mapview__head p { margin: 0; color: var(--c-text-muted); font-size: 14px; }
+.mapview__count {
+  background: var(--c-primary); color: white;
+  font-weight: 700; font-size: 18px;
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  display: grid; place-items: center;
+  font-feature-settings: 'tnum';
 }
-.mapview__chip.active { background: var(--c-primary, #1a4d8c); color: white; border-color: var(--c-primary); }
-.mapview__detail { background: var(--c-bg); padding: 16px; border-radius: 16px; margin-top: 16px; }
-.mapview__cta {
-  margin-top: 16px; width: 100%; background: var(--c-primary); color: white;
-  border: none; border-radius: 12px; padding: 16px; font-size: 18px; font-weight: 600; cursor: pointer;
-  min-height: 56px;
+
+.cat-list {
+  display: flex; flex-wrap: wrap; gap: var(--s-2);
+  padding: var(--s-4) var(--s-6);
+  border-bottom: 1px solid var(--c-border);
 }
-@media (max-width: 900px) { .mapview { grid-template-columns: 1fr; grid-template-rows: 60% 40%; } }
+.cat-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  background: var(--c-bg-soft); border: 2px solid transparent;
+  border-radius: var(--r-full);
+  font-size: 14px; font-weight: 600; color: var(--c-text-muted);
+  transition: all var(--dur-fast);
+}
+.cat-chip__icon { font-size: 16px; }
+.cat-chip__count {
+  background: rgba(0,0,0,0.06); color: var(--c-text-muted);
+  padding: 0 8px; min-width: 22px; text-align: center;
+  border-radius: 999px; font-size: 12px;
+}
+.cat-chip.active {
+  background: var(--cat-color, var(--c-primary));
+  color: white; border-color: transparent;
+  box-shadow: var(--sh-sm);
+}
+.cat-chip.active .cat-chip__count { background: rgba(255,255,255,0.25); color: white; }
+
+.poi-list {
+  flex: 1; overflow-y: auto;
+  padding: var(--s-3) var(--s-3);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.poi-item {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: transparent; border: 2px solid transparent;
+  border-radius: var(--r-md);
+  text-align: left;
+  transition: all var(--dur-fast);
+}
+.poi-item:hover { background: var(--c-bg-soft); }
+.poi-item.selected {
+  background: var(--c-bg-soft); border-color: var(--cat-color, var(--c-primary));
+}
+.poi-item__icon {
+  width: 44px; height: 44px;
+  background: white; border: 2px solid var(--cat-color, var(--c-border));
+  border-radius: var(--r-md);
+  display: grid; place-items: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.poi-item__body { display: flex; flex-direction: column; gap: 2px; }
+.poi-item__name { font-weight: 600; color: var(--c-text); font-size: 16px; }
+.poi-item__meta { color: var(--c-text-muted); font-size: 13px; display: flex; gap: 4px; }
+
+.poi-empty { text-align: center; padding: var(--s-8) var(--s-4); color: var(--c-text-soft); font-size: 14px; }
+
+@media (max-width: 900px) {
+  .mapview { grid-template-columns: 1fr; grid-template-rows: 50% 50%; }
+  .mapview__side { border-left: none; border-top: 1px solid var(--c-border); }
+}
 </style>
