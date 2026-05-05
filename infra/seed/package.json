@@ -8,11 +8,11 @@
   "dependencies": {
     "@concierge/types": "workspace:*",
     "bcryptjs": "^2.4.3",
-    "mongoose": "^8.5.4",
-    "tsx": "^4.19.0"
+    "mongoose": "^8.5.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^22.5.0"
+    "@types/node": "^22.5.0",
+    "tsx": "^4.21.0"
   }
 }

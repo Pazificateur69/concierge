@@ -4,7 +4,18 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import type { LoginResponse, Order, Survey, SurveyStats } from '@concierge/types';
 
-const API = (window as any).__API__ || 'http://localhost:3000';
+function resolveApi(): string {
+  const params = new URLSearchParams(window.location.search);
+  const queryApi = params.get('api');
+  if (queryApi) sessionStorage.setItem('concierge_api', queryApi);
+  return (
+    queryApi ||
+    sessionStorage.getItem('concierge_api') ||
+    (window as any).__API__ ||
+    'http://localhost:4000'
+  );
+}
+const API = resolveApi();
 
 @Component({
   selector: 'app-root',

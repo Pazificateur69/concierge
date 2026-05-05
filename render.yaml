@@ -1,19 +1,34 @@
 # Infrastructure as Code pour Render — déploie tous les microservices + gateway
-# https://render.com/docs/blueprint-spec
+# Blueprint spec : https://render.com/docs/blueprint-spec
+#
+# Usage : Render dashboard → New + → Blueprint → connecte le repo concierge
+# Tout se déploie en 1 clic.
+
+envVarGroups:
+  - name: concierge-shared
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        value: mongodb+srv://alessandronetstrategy_db_user:FPbaVlM9BJzq6PNj@cluster0.dhduoky.mongodb.net/concierge?retryWrites=true&w=majority&appName=Cluster0
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
 
 services:
-  # ───────── API Gateway ─────────
+  # ───────── API Gateway (entrée publique) ─────────
   - type: web
     name: concierge-gateway
     runtime: node
     region: frankfurt
     plan: free
     rootDir: apps/api-gateway
-    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter api-gateway build
+    buildCommand: corepack enable && cd ../.. && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types --filter @concierge/nest-common --filter api-gateway build
     startCommand: node dist/main.js
+    healthCheckPath: /health
     envVars:
-      - key: NODE_ENV
-        value: production
+      - fromGroup: concierge-shared
       - key: PORT
         value: 10000
       - key: SERVICE_AUTH_URL
@@ -34,20 +49,13 @@ services:
     region: frankfurt
     plan: free
     rootDir: services/auth-service
-    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter auth-service build
+    buildCommand: corepack enable && cd ../.. && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types --filter @concierge/nest-common --filter auth-service build
     startCommand: node dist/main.js
     healthCheckPath: /auth/health
     envVars:
-      - key: NODE_ENV
-        value: production
+      - fromGroup: concierge-shared
       - key: PORT
         value: 10000
-      - key: MONGO_URI
-        sync: false
-      - key: JWT_SECRET
-        generateValue: true
-      - key: JWT_REFRESH_SECRET
-        generateValue: true
 
   # ───────── tenant-service ─────────
   - type: web
@@ -56,17 +64,12 @@ services:
     region: frankfurt
     plan: free
     rootDir: services/tenant-service
-    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter tenant-service build
+    buildCommand: corepack enable && cd ../.. && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types --filter @concierge/nest-common --filter tenant-service build
     startCommand: node dist/main.js
     envVars:
-      - key: NODE_ENV
-        value: production
+      - fromGroup: concierge-shared
       - key: PORT
         value: 10000
-      - key: MONGO_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false
 
   # ───────── content-service ─────────
   - type: web
@@ -75,36 +78,26 @@ services:
     region: frankfurt
     plan: free
     rootDir: services/content-service
-    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter content-service build
+    buildCommand: corepack enable && cd ../.. && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types --filter @concierge/nest-common --filter content-service build
     startCommand: node dist/main.js
     envVars:
-      - key: NODE_ENV
-        value: production
+      - fromGroup: concierge-shared
       - key: PORT
         value: 10000
-      - key: MONGO_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false
 
-  # ───────── orders-service ─────────
+  # ───────── orders-service (avec WebSocket) ─────────
   - type: web
     name: concierge-orders
     runtime: node
     region: frankfurt
     plan: free
     rootDir: services/orders-service
-    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter orders-service build
+    buildCommand: corepack enable && cd ../.. && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types --filter @concierge/nest-common --filter orders-service build
     startCommand: node dist/main.js
     envVars:
-      - key: NODE_ENV
-        value: production
+      - fromGroup: concierge-shared
       - key: PORT
         value: 10000
-      - key: MONGO_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false
 
   # ───────── survey-service ─────────
   - type: web
@@ -113,14 +106,9 @@ services:
     region: frankfurt
     plan: free
     rootDir: services/survey-service
-    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile=false && pnpm --filter survey-service build
+    buildCommand: corepack enable && cd ../.. && pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types --filter @concierge/nest-common --filter survey-service build
     startCommand: node dist/main.js
     envVars:
-      - key: NODE_ENV
-        value: production
+      - fromGroup: concierge-shared
       - key: PORT
         value: 10000
-      - key: MONGO_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false

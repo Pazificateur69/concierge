@@ -5,7 +5,18 @@ import { HttpClient } from '@angular/common/http';
 import { io, Socket } from 'socket.io-client';
 import type { Order, OrderStatus, LoginResponse } from '@concierge/types';
 
-const API = (window as any).__API__ || 'http://localhost:3000';
+function resolveApi(): string {
+  const params = new URLSearchParams(window.location.search);
+  const queryApi = params.get('api');
+  if (queryApi) sessionStorage.setItem('concierge_api', queryApi);
+  return (
+    queryApi ||
+    sessionStorage.getItem('concierge_api') ||
+    (window as any).__API__ ||
+    'http://localhost:4000'
+  );
+}
+const API = resolveApi();
 
 @Component({
   selector: 'app-root',

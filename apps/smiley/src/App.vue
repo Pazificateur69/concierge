@@ -4,8 +4,10 @@ import { onMounted, ref, computed } from 'vue';
 import axios from 'axios';
 import type { Survey, Question, SurveyAnswer } from '@concierge/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const params = new URLSearchParams(window.location.search);
+const queryApi = params.get('api');
+if (queryApi) sessionStorage.setItem('concierge_api', queryApi);
+const API_URL = queryApi || sessionStorage.getItem('concierge_api') || import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const tenantSlug = params.get('tenant') || 'royal-lyon';
 const surveySlug = params.get('survey') || 'satisfaction-checkout';
 const room = params.get('room') || '';
