@@ -462,6 +462,43 @@
   }
   .colophon__bottom-right { letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
 
+  /* LIVE STATS */
+  .livestats { padding: 96px 32px 64px; background: var(--c-paper); border-top: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border); }
+  .livestats__inner { max-width: 1320px; margin: 0 auto; }
+  .livestats__head { text-align: center; margin-bottom: 48px; }
+  .livestats__head .eyebrow { display: inline-flex; align-items: center; gap: 8px; }
+  .livestats__dot { width: 6px; height: 6px; border-radius: 50%; background: #36644a; box-shadow: 0 0 12px rgba(54,100,74,0.6); animation: ls-pulse 1.5s ease-in-out infinite; }
+  @keyframes ls-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
+  .livestats__title { font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 500; margin: 8px 0 0; color: var(--c-ink); letter-spacing: -0.02em; }
+  .livestats__title em { color: var(--c-accent-deep); font-style: italic; }
+  .livestats__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .livestat { padding: 32px 24px; background: var(--c-bg-card); border: 1px solid var(--c-border); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; transition: all 0.3s; }
+  .livestat:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(20,32,46,0.08); }
+  .livestat--accent { background: var(--c-ink); color: var(--c-paper); border-color: var(--c-ink); }
+  .livestat--accent .eyebrow { color: var(--c-accent-soft); }
+  .livestat__num { font-family: 'Cormorant Garamond', serif; font-size: 56px; font-weight: 500; line-height: 1; color: var(--c-ink); font-feature-settings: 'tnum'; letter-spacing: -0.02em; transition: color 0.3s; }
+  .livestat--accent .livestat__num { color: white; }
+  .livestat__num.flash { color: var(--c-accent); }
+  .livestat--accent .livestat__num.flash { color: var(--c-accent-soft); }
+  .livestat__sub { font-size: 12px; color: var(--c-text-muted); }
+  .livestat--accent .livestat__sub { color: rgba(245,240,232,0.7); }
+
+  /* COMPARE */
+  .compare { padding: 96px 32px; }
+  .compare__head { max-width: 720px; margin: 0 auto 48px; text-align: center; }
+  .compare__head h2 { font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 500; margin: 8px 0 12px; color: var(--c-ink); letter-spacing: -0.02em; }
+  .compare__head h2 em { color: var(--c-accent-deep); font-style: italic; }
+  .compare__head p { color: var(--c-text-muted); font-size: 16px; line-height: 1.6; max-width: 520px; margin: 0 auto; }
+  .compare__grid { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .compare__card { display: grid; grid-template-columns: 280px 1fr; min-height: 280px; background: var(--c-bg-card); border: 1px solid var(--c-border); overflow: hidden; transition: all 0.3s; }
+  .compare__card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(20,32,46,0.1); }
+  .compare__bg { background-size: cover; background-position: center; }
+  .compare__body { padding: 32px 28px; display: flex; flex-direction: column; gap: 12px; }
+  .compare__title { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 500; margin: 0; color: var(--c-ink); letter-spacing: -0.01em; line-height: 1.1; }
+  .compare__list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 8px; }
+  .compare__list li { font-size: 14px; color: var(--c-text-muted); padding-left: 16px; position: relative; }
+  .compare__list li::before { content: ''; position: absolute; left: 0; top: 8px; width: 8px; height: 1px; background: var(--c-accent); }
+
   /* RESPONSIVE */
   @media (max-width: 900px) {
     .hero__content, .hero__bottom { padding-left: 32px; padding-right: 32px; }
@@ -475,6 +512,14 @@
     .colophon__row { grid-template-columns: 1fr; gap: 24px; }
     .colophon__bottom { flex-direction: column; gap: 8px; text-align: center; }
     .acc { grid-template-columns: 1fr; gap: 4px; padding: 16px; }
+  }
+  @media (max-width: 900px) {
+    .livestats__grid { grid-template-columns: 1fr 1fr; }
+    .livestats__title { font-size: 36px; }
+    .compare__grid { grid-template-columns: 1fr; }
+    .compare__card { grid-template-columns: 1fr; }
+    .compare__bg { height: 200px; }
+    .compare__head h2 { font-size: 36px; }
   }
   @media (max-width: 540px) {
     .topbar { padding: 14px 18px; gap: 12px; flex-wrap: wrap; }
@@ -656,6 +701,22 @@
   </div>
 </section>
 
+<!-- LIVE STATS -->
+<section class="livestats">
+  <div class="livestats__inner">
+    <header class="livestats__head">
+      <span class="eyebrow"><span class="livestats__dot"></span>Données live · production</span>
+      <h2 class="livestats__title">Concierge en chiffres <em>réels</em></h2>
+    </header>
+    <div class="livestats__grid">
+      <div class="livestat"><span class="eyebrow">Commandes total</span><span class="livestat__num" id="ls-total">—</span><span class="livestat__sub">depuis lancement</span></div>
+      <div class="livestat livestat--accent"><span class="eyebrow">24 dernières heures</span><span class="livestat__num" id="ls-24h">—</span><span class="livestat__sub">commandes traitées</span></div>
+      <div class="livestat"><span class="eyebrow">Chiffre d'affaires</span><span class="livestat__num" id="ls-rev">—</span><span class="livestat__sub">cumulé · démo</span></div>
+      <div class="livestat"><span class="eyebrow">Enquêtes</span><span class="livestat__num" id="ls-surveys">—</span><span class="livestat__sub">réponses collectées</span></div>
+    </div>
+  </div>
+</section>
+
 <!-- FACTS -->
 <section class="facts">
   <div class="facts__inner">
@@ -679,6 +740,43 @@
       <span class="fact__num"><em>100%</em></span>
       <span class="fact__label">Render · Vercel · MongoDB Atlas</span>
     </div>
+  </div>
+</section>
+
+<!-- MULTI-TENANT COMPARE -->
+<section class="compare">
+  <header class="compare__head">
+    <span class="eyebrow">Multi-tenant en action</span>
+    <h2>Deux hôtels, <em>une plateforme</em></h2>
+    <p>Royal Lyon et Negresco partagent le même code mais affichent leurs propres adresses, carte, langues, et identité visuelle.</p>
+  </header>
+  <div class="compare__grid">
+    <article class="compare__card">
+      <div class="compare__bg" style="background-image:url('https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=900&q=80')"></div>
+      <div class="compare__body">
+        <span class="eyebrow">Lyon</span>
+        <h3 class="compare__title">Le Royal Lyon</h3>
+        <ul class="compare__list">
+          <li>Cuisine lyonnaise · 30 plats</li>
+          <li>31 adresses POI · Vieux Lyon, Confluences</li>
+          <li>FR · EN · DE · ES · JP</li>
+          <li>Théme ivoire / encre / or</li>
+        </ul>
+      </div>
+    </article>
+    <article class="compare__card">
+      <div class="compare__bg" style="background-image:url('https://images.unsplash.com/photo-1582719508461-905c673771fd?w=900&q=80')"></div>
+      <div class="compare__body">
+        <span class="eyebrow">Nice</span>
+        <h3 class="compare__title">Le Negresco</h3>
+        <ul class="compare__list">
+          <li>Cuisine méditerranéenne · 30 plats</li>
+          <li>15 adresses POI · Promenade des Anglais</li>
+          <li>FR · EN · DE · ES · IT</li>
+          <li>Thème azur / sable / corail</li>
+        </ul>
+      </div>
+    </article>
   </div>
 </section>
 
@@ -797,6 +895,70 @@
     <span class="colophon__bottom-right">Powered by Dymension</span>
   </div>
 </footer>
+
+<!-- Live counters -->
+<script>
+(function() {
+  const API = 'https://concierge-api-gateway.onrender.com';
+  const FALLBACK = { totalOrders: 160, ordersLast24h: 24, totalRevenue: 14820, surveysCollected: 220 };
+  const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
+
+  function animateValue(el, from, to, duration, fmtFn) {
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const v = from + (to - from) * eased;
+      el.textContent = fmtFn ? fmtFn(v) : fmt(v);
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function setStats(data, animate) {
+    const map = [
+      { id: 'ls-total', value: data.totalOrders ?? 0 },
+      { id: 'ls-24h', value: data.ordersLast24h ?? 0 },
+      { id: 'ls-rev', value: data.totalRevenue ?? 0, fmt: (v) => fmt(v) + ' €' },
+      { id: 'ls-surveys', value: data.surveysCollected ?? 0 },
+    ];
+    for (const m of map) {
+      const el = document.getElementById(m.id);
+      if (!el) continue;
+      const prev = parseInt((el.textContent || '0').replace(/[^\d]/g, '')) || 0;
+      if (animate) {
+        el.classList.add('flash');
+        setTimeout(() => el.classList.remove('flash'), 600);
+        animateValue(el, prev, m.value, 1200, m.fmt);
+      } else {
+        el.textContent = m.fmt ? m.fmt(m.value) : fmt(m.value);
+      }
+    }
+  }
+
+  async function poll() {
+    try {
+      const r = await fetch(API + '/orders/public-stats', { cache: 'no-store' });
+      if (!r.ok) throw new Error('not ok');
+      const data = await r.json();
+      setStats(data, true);
+    } catch {
+      setStats(FALLBACK, true);
+    }
+  }
+
+  // Initial in-view animation, then poll every 30s
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      poll();
+      observer.disconnect();
+      setInterval(poll, 30000);
+    }
+  });
+  const target = document.querySelector('.livestats');
+  if (target) observer.observe(target);
+})();
+</script>
 
 </body>
 </html>

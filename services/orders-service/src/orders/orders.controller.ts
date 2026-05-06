@@ -19,6 +19,12 @@ export class OrdersController {
     return this.ordersService.list(user.tenantId, status, room);
   }
 
+  @Get('public-stats')
+  @ApiOperation({ summary: 'Public counters used by the portal landing page (no PII)' })
+  async publicStats(@Query('tenantId') tenantId?: string) {
+    return this.ordersService.publicStats(tenantId);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create an order (no auth — kiosk public)' })
   create(@Body() dto: CreateOrderDto) {

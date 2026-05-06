@@ -55,6 +55,20 @@ const API = resolveApi();
               <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
             </svg>
           </button>
+          <button class="topbar-btn" (click)="toggleNotifications()" [class.active]="notificationsEnabled()" aria-label="Notifications" title="Notifications bureau">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </button>
+          <button class="topbar-btn topbar-btn--sos" [class.active]="sosActive()" (click)="triggerSOS()" aria-label="SOS staff" title="Alerte staff (SOS)">SOS</button>
+          <button class="topbar-btn" (click)="showHistory.set(true)" aria-label="Historique" title="Historique 30 jours">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v5h5M3.05 13a9 9 0 1 0 .49-4.36"/><path d="M12 7v5l3 3"/></svg>
+          </button>
+          <div class="agent-stats" [title]="'Tu as traité ' + agentHandled() + ' commandes aujourd\\'hui'">
+            <span class="eyebrow">Toi</span>
+            <span class="agent-stats__num serif">{{ agentHandled() }}</span>
+            <span class="agent-stats__sub mono" *ngIf="agentHandled() > 0">{{ avgMinPerOrder() }}min</span>
+          </div>
           <div class="user-chip">
             <div class="avatar">{{ userInitial() }}</div>
             <span>{{ user()?.firstName }}</span>
@@ -231,6 +245,39 @@ const API = resolveApi();
         </footer>
       </aside>
       <div class="detail-overlay" *ngIf="!!detailOrder()" (click)="detailOrder.set(null)"></div>
+
+      <!-- HISTORY DRAWER -->
+      <div class="detail-overlay" *ngIf="showHistory()" (click)="showHistory.set(false)"></div>
+      <aside class="detail" [class.open]="showHistory()" *ngIf="showHistory()" style="width: 640px;">
+        <header class="detail__head">
+          <div>
+            <span class="eyebrow">Historique 30 jours</span>
+            <h2 class="serif">Toutes les commandes</h2>
+          </div>
+          <button class="detail__close" (click)="showHistory.set(false)" aria-label="Fermer">×</button>
+        </header>
+        <div class="detail__body">
+          <div class="history-toolbar">
+            <span class="history-count">{{ historyOrders().length }} commandes · {{ historyTotal().toFixed(0) }} € de CA</span>
+            <button class="history-export" (click)="exportHistoryCSV()">Exporter CSV</button>
+          </div>
+          <table class="history-table">
+            <thead><tr><th>Date</th><th>Ch.</th><th>Articles</th><th>Total</th><th>État</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let o of historyOrders()" (click)="openDetail(o); showHistory.set(false)">
+                <td class="mono">{{ formatHistoryDate(o.createdAt) }}</td>
+                <td><b>{{ o.room }}</b></td>
+                <td>{{ o.items.length }} art.</td>
+                <td class="serif" style="font-feature-settings:'tnum'">{{ o.total.toFixed(2) }} €</td>
+                <td><span class="tag tag--{{ o.status }}">{{ statusLabel(o.status) }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </aside>
+
+      <!-- CONFETTI CANVAS -->
+      <canvas #confetti class="confetti-canvas" *ngIf="confettiPieces().length"></canvas>
     </div>
 
     <ng-template #loginTpl>
@@ -445,6 +492,31 @@ const API = resolveApi();
     .shortcuts__list li { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--c-ink); }
     .shortcuts__list kbd { display: inline-block; min-width: 28px; padding: 4px 10px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; background: var(--c-paper); border: 1px solid var(--c-border-strong); color: var(--c-ink); }
 
+    /* SOS */
+    .topbar-btn--sos { background: rgba(145,53,40,0.06); color: var(--c-danger); border-color: rgba(145,53,40,0.3); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; width: auto; padding: 0 12px; }
+    .topbar-btn--sos:hover { background: var(--c-danger); color: white; border-color: var(--c-danger); }
+    .topbar-btn--sos.active { background: var(--c-danger); color: white; border-color: var(--c-danger); animation: sos-pulse 0.8s ease-in-out infinite; }
+    @keyframes sos-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(145,53,40,0.6); } 50% { box-shadow: 0 0 0 8px transparent; } }
+
+    /* AGENT STATS */
+    .agent-stats { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; border-left: 1px solid var(--c-border); margin-left: 4px; line-height: 1.1; }
+    .agent-stats .eyebrow { font-size: 9px; }
+    .agent-stats__num { font-size: 18px; color: var(--c-ink); font-feature-settings: 'tnum'; }
+    .agent-stats__sub { font-size: 10px; color: var(--c-text-soft); }
+
+    /* CONFETTI */
+    .confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 1000; }
+
+    /* HISTORY */
+    .history-toolbar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--c-border); margin-bottom: 12px; }
+    .history-count { font-size: 13px; color: var(--c-text-muted); }
+    .history-export { padding: 8px 14px; background: var(--c-ink); color: white; border: none; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
+    .history-export:hover { background: var(--c-accent); }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .history-table th { text-align: left; font-weight: 600; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-text-soft); padding: 8px 0; border-bottom: 1px solid var(--c-border); }
+    .history-table td { padding: 10px 4px; border-bottom: 1px solid var(--c-border); cursor: pointer; }
+    .history-table tbody tr:hover { background: var(--c-paper); }
+
     .tag { display: inline-block; padding: 2px 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid currentColor; }
     .tag--pending { color: var(--c-warning); }
     .tag--accepted { color: #1e40af; }
@@ -493,6 +565,12 @@ export class AppComponent implements OnInit, OnDestroy {
   detailOrder = signal<Order | null>(null);
   showShortcuts = signal(false);
   selectedIndex = signal(-1);
+  notificationsEnabled = signal(localStorage.getItem('reception_notif') !== '0');
+  agentHandled = signal<number>(parseInt(localStorage.getItem('reception_handled') || '0', 10));
+  agentTotalMin = signal<number>(parseInt(localStorage.getItem('reception_total_min') || '0', 10));
+  confettiPieces = signal<{ x: number; y: number; vx: number; vy: number; rot: number; vrot: number; color: string; size: number }[]>([]);
+  sosActive = signal(false);
+  showHistory = signal(false);
 
   private socket: Socket | null = null;
   private token = '';
@@ -650,6 +728,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.orders.update((list) => [o, ...list]);
       this.markNew(o.id);
       if (this.soundEnabled()) this.playSound();
+      this.pushNotification(`Nouvelle commande · Chambre ${o.room}`, `${o.items.length} article${o.items.length>1?'s':''} · ${o.total.toFixed(2)} €`);
     });
     this.socket.on('order:updated', (o: Order) => {
       this.orders.update((list) => list.map((x) => (x.id === o.id ? o : x)));
@@ -664,7 +743,143 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   updateStatus(order: Order, status: OrderStatus) {
-    this.http.patch<Order>(`${API}/orders/${order.id}/status`, { status }, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe();
+    this.http.patch<Order>(`${API}/orders/${order.id}/status`, { status }, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe(() => {
+      if (status === 'delivered') {
+        this.recordHandled(order);
+        this.fireConfetti();
+      }
+    });
+  }
+
+  recordHandled(o: Order) {
+    const min = Math.max(1, Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000));
+    this.agentHandled.update((n) => n + 1);
+    this.agentTotalMin.update((m) => m + min);
+    localStorage.setItem('reception_handled', String(this.agentHandled()));
+    localStorage.setItem('reception_total_min', String(this.agentTotalMin()));
+  }
+
+  toggleNotifications() {
+    const next = !this.notificationsEnabled();
+    this.notificationsEnabled.set(next);
+    localStorage.setItem('reception_notif', next ? '1' : '0');
+    if (next && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  pushNotification(title: string, body: string) {
+    if (!this.notificationsEnabled()) return;
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        const n = new Notification(title, { body, icon: '/favicon.svg', badge: '/favicon.svg', tag: 'concierge-order', requireInteraction: false });
+        n.onclick = () => { window.focus(); n.close(); };
+      } catch {}
+    }
+  }
+
+  triggerSOS() {
+    if (this.sosActive()) return;
+    this.sosActive.set(true);
+    this.pushNotification('Alerte staff (SOS)', 'Demande d\'assistance immédiate envoyée à tout le personnel');
+    if (this.soundEnabled()) {
+      // urgent triple beep
+      try {
+        const ctx = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
+        for (let i = 0; i < 3; i++) {
+          const o = ctx.createOscillator(); const g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.frequency.setValueAtTime(880, ctx.currentTime + i * 0.25);
+          g.gain.setValueAtTime(0.16, ctx.currentTime + i * 0.25);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.25 + 0.18);
+          o.start(ctx.currentTime + i * 0.25); o.stop(ctx.currentTime + i * 0.25 + 0.2);
+        }
+      } catch {}
+    }
+    setTimeout(() => this.sosActive.set(false), 4000);
+  }
+
+  // Confetti
+  private confettiTimer: any = null;
+  fireConfetti() {
+    const colors = ['#b8985a', '#8e7138', '#d6bd87', '#f5f0e8', '#36644a'];
+    const pieces: any[] = [];
+    const w = window.innerWidth;
+    for (let i = 0; i < 80; i++) {
+      pieces.push({
+        x: w / 2 + (Math.random() - 0.5) * 200,
+        y: window.innerHeight / 2 - 100,
+        vx: (Math.random() - 0.5) * 14,
+        vy: -10 - Math.random() * 6,
+        rot: Math.random() * 360,
+        vrot: (Math.random() - 0.5) * 14,
+        color: colors[i % colors.length],
+        size: 4 + Math.random() * 6,
+      });
+    }
+    this.confettiPieces.set(pieces);
+    if (this.confettiTimer) clearInterval(this.confettiTimer);
+    const start = Date.now();
+    this.confettiTimer = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const updated = this.confettiPieces().map((p) => ({
+        ...p,
+        x: p.x + p.vx,
+        y: p.y + p.vy,
+        vy: p.vy + 0.4,
+        rot: p.rot + p.vrot,
+      }));
+      this.confettiPieces.set(updated);
+      this.drawConfetti();
+      if (elapsed > 2200) {
+        clearInterval(this.confettiTimer); this.confettiTimer = null;
+        this.confettiPieces.set([]);
+      }
+    }, 16);
+  }
+  drawConfetti() {
+    const canvas = document.querySelector('canvas.confetti-canvas') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of this.confettiPieces()) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rot * Math.PI) / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.8);
+      ctx.restore();
+    }
+  }
+
+  avgMinPerOrder = computed(() => this.agentHandled() ? Math.round(this.agentTotalMin() / this.agentHandled()) : 0);
+
+  // History
+  historyOrders = computed(() => {
+    const cutoff = Date.now() - 30 * 86400000;
+    return this.orders().filter((o) => new Date(o.createdAt).getTime() > cutoff).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  });
+  historyTotal = computed(() => this.historyOrders().filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0));
+  formatHistoryDate(iso: string) {
+    return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+  exportHistoryCSV() {
+    const rows = this.historyOrders().map((o) => ({
+      id: o.id, room: o.room, status: o.status, source: o.source,
+      total: o.total.toFixed(2),
+      items: o.items.map((it: any) => `${it.quantity}× ${it.name}`).join(' / '),
+      createdAt: o.createdAt,
+    }));
+    if (!rows.length) return;
+    const headers = Object.keys(rows[0]);
+    const escape = (v: any) => /[",\n;]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+    const csv = [headers.join(';'), ...rows.map((r) => headers.map((h) => escape((r as any)[h])).join(';'))].join('\n');
+    const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `historique-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
 
   confirmCancel(order: Order) {
