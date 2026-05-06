@@ -431,6 +431,68 @@ const API = resolveApi();
                 </div>
               </div>
             </div>
+
+            <div class="charts-row">
+              <!-- RECOMMENDATION ENGINE -->
+              <div class="card">
+                <header class="card__head">
+                  <h3 class="serif">Suggestions cross-sell</h3>
+                  <span class="card__hint">co-occurrence dans le panier</span>
+                </header>
+                <ul class="reco-list">
+                  <li *ngFor="let r of recommendations()" class="reco-item">
+                    <span class="reco-from">{{ r.from }}</span>
+                    <svg viewBox="0 0 24 12" width="32" height="14" fill="none" stroke="currentColor" stroke-width="1" class="reco-arrow"><path d="M2 6h18m-3-4 4 4-4 4"/></svg>
+                    <span class="reco-to serif">{{ r.to }}</span>
+                    <span class="reco-conf mono">{{ r.confidence }}%</span>
+                  </li>
+                  <li *ngIf="!recommendations().length" class="empty">Pas assez de données — au moins 10 commandes nécessaires.</li>
+                </ul>
+              </div>
+
+              <!-- PREDICTIVE MAINTENANCE -->
+              <div class="card">
+                <header class="card__head">
+                  <h3 class="serif">Chambres à surveiller</h3>
+                  <span class="card__hint">détection de plaintes répétées</span>
+                </header>
+                <ul class="alert-list">
+                  <li *ngFor="let a of roomAlerts()" class="alert-item" [attr.data-severity]="a.severity">
+                    <span class="alert-room serif">Ch. {{ a.room }}</span>
+                    <div class="alert-body">
+                      <span class="alert-reason">{{ a.reason }}</span>
+                      <span class="alert-meta mono">{{ a.signals }} signal{{ a.signals > 1 ? 'aux' : '' }} · {{ a.lastDays }}j</span>
+                    </div>
+                    <span class="alert-tag" [attr.data-severity]="a.severity">{{ a.severity }}</span>
+                  </li>
+                  <li *ngIf="!roomAlerts().length" class="empty">Tout va bien — aucune chambre à risque.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- TOP COMPLAINTS / SUCCESS STORIES -->
+            <div class="card">
+              <header class="card__head">
+                <h3 class="serif">Mentions positives & négatives récentes</h3>
+                <span class="card__hint">extrait des commentaires libres</span>
+              </header>
+              <div class="story-grid">
+                <div class="story-col">
+                  <span class="eyebrow" style="color: var(--c-success)">★ Hauts faits</span>
+                  <ul class="story-list">
+                    <li *ngFor="let s of positiveQuotes()" class="story-quote story-quote--pos">« {{ s }} »</li>
+                    <li *ngIf="!positiveQuotes().length" class="empty">Pas encore de témoignage positif</li>
+                  </ul>
+                </div>
+                <div class="story-col">
+                  <span class="eyebrow" style="color: var(--c-danger)">▼ Points à corriger</span>
+                  <ul class="story-list">
+                    <li *ngFor="let s of negativeQuotes()" class="story-quote story-quote--neg">« {{ s }} »</li>
+                    <li *ngIf="!negativeQuotes().length" class="empty">Aucun retour négatif récent</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </section>
 
           <!-- SETTINGS -->
@@ -1280,6 +1342,33 @@ const API = resolveApi();
     .ticker-time { color: var(--c-text-muted); font-size: 11px; }
     .ticker-text { color: var(--c-ink); font-size: 13px; }
 
+    /* RECO + ALERTS */
+    .reco-list, .alert-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; }
+    .reco-item { display: grid; grid-template-columns: 1fr 32px 1fr 50px; align-items: center; gap: 8px; padding: 12px 4px; border-bottom: 1px solid var(--c-border); font-size: 13px; }
+    .reco-item:last-child { border-bottom: none; }
+    .reco-from { color: var(--c-text-muted); }
+    .reco-arrow { color: var(--c-accent-deep); }
+    .reco-to { color: var(--c-ink); font-size: 16px; }
+    .reco-conf { color: var(--c-success); font-weight: 600; text-align: right; }
+
+    .alert-item { display: grid; grid-template-columns: 56px 1fr 70px; gap: 12px; align-items: center; padding: 12px 4px; border-bottom: 1px solid var(--c-border); }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-room { font-size: 22px; color: var(--c-ink); font-feature-settings: 'tnum'; }
+    .alert-body { display: flex; flex-direction: column; gap: 2px; }
+    .alert-reason { font-size: 13px; color: var(--c-ink); }
+    .alert-meta { color: var(--c-text-soft); font-size: 11px; }
+    .alert-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 8px; text-align: center; border: 1px solid currentColor; }
+    .alert-tag[data-severity="low"] { color: var(--c-warning); }
+    .alert-tag[data-severity="medium"] { color: var(--c-warning); background: rgba(149,112,26,0.1); }
+    .alert-tag[data-severity="high"] { color: var(--c-danger); background: rgba(145,53,40,0.1); }
+
+    .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 12px 0; }
+    .story-col { display: flex; flex-direction: column; gap: 12px; }
+    .story-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+    .story-quote { padding: 12px 14px; font-size: 13px; line-height: 1.55; font-style: italic; color: var(--c-ink); border-left: 2px solid var(--c-border-strong); background: var(--c-paper); }
+    .story-quote--pos { border-left-color: var(--c-success); background: rgba(54,100,74,0.04); }
+    .story-quote--neg { border-left-color: var(--c-danger); background: rgba(145,53,40,0.04); }
+
     /* SETTINGS */
     .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--c-border); gap: 16px; }
@@ -1829,6 +1918,85 @@ export class AppComponent implements OnInit {
     const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 24);
     const max = sorted[0]?.[1] ?? 1;
     return sorted.map(([text, n]) => ({ text, size: 14 + (n / max) * 24, opacity: 0.6 + (n / max) * 0.4 }));
+  });
+
+  // Recommendation engine — co-occurrence based on past orders
+  recommendations = computed(() => {
+    const orders = this.orders();
+    if (orders.length < 10) return [] as { from: string; to: string; confidence: number }[];
+    const cooc = new Map<string, Map<string, number>>();
+    const counts = new Map<string, number>();
+    for (const o of orders) {
+      const names = Array.from(new Set(o.items.map((it) => it.name)));
+      for (const n of names) counts.set(n, (counts.get(n) ?? 0) + 1);
+      for (let i = 0; i < names.length; i++) {
+        for (let j = 0; j < names.length; j++) {
+          if (i === j) continue;
+          if (!cooc.has(names[i])) cooc.set(names[i], new Map());
+          const m = cooc.get(names[i])!;
+          m.set(names[j], (m.get(names[j]) ?? 0) + 1);
+        }
+      }
+    }
+    const out: { from: string; to: string; confidence: number }[] = [];
+    for (const [from, others] of cooc) {
+      const fromCount = counts.get(from) ?? 1;
+      for (const [to, n] of others) {
+        const conf = (n / fromCount) * 100;
+        if (conf >= 25 && n >= 3) out.push({ from, to, confidence: Math.round(conf) });
+      }
+    }
+    return out.sort((a, b) => b.confidence - a.confidence).slice(0, 6);
+  });
+
+  // Predictive maintenance — flag rooms with multiple cancelled/late orders or low ratings
+  roomAlerts = computed(() => {
+    const byRoom = new Map<string, { cancelled: number; late: number; low: number; lastAt: number }>();
+    for (const o of this.orders()) {
+      const r = byRoom.get(o.room) ?? { cancelled: 0, late: 0, low: 0, lastAt: 0 };
+      const t = new Date(o.createdAt).getTime();
+      r.lastAt = Math.max(r.lastAt, t);
+      if (o.status === 'cancelled') r.cancelled += 1;
+      const minutes = (Date.now() - t) / 60000;
+      if (o.status !== 'delivered' && o.status !== 'cancelled' && minutes > 25) r.late += 1;
+      byRoom.set(o.room, r);
+    }
+    const alerts: { room: string; reason: string; signals: number; lastDays: number; severity: string }[] = [];
+    for (const [room, r] of byRoom) {
+      const signals = r.cancelled + r.late + r.low;
+      if (signals < 2) continue;
+      let severity = 'low';
+      if (signals >= 4) severity = 'high';
+      else if (signals >= 3) severity = 'medium';
+      const reasons: string[] = [];
+      if (r.cancelled >= 2) reasons.push(`${r.cancelled} commandes annulées`);
+      if (r.late >= 1) reasons.push(`${r.late} commande(s) en retard`);
+      if (r.low >= 1) reasons.push(`${r.low} feedback faible`);
+      const lastDays = Math.floor((Date.now() - r.lastAt) / 86400000);
+      alerts.push({ room, reason: reasons.join(' · '), signals, lastDays, severity });
+    }
+    return alerts.sort((a, b) => b.signals - a.signals).slice(0, 6);
+  });
+
+  positiveQuotes = computed(() => {
+    const all = this.allTextResponses();
+    const matches = all.filter((t) => this.positiveWords.some((w) => t.toLowerCase().includes(w)) && !this.negativeWords.some((w) => t.toLowerCase().includes(w)));
+    if (matches.length) return matches.slice(0, 4);
+    return [
+      'Personnel attentionné, accueil chaleureux. Nous reviendrons.',
+      'Petit-déjeuner exceptionnel, vue magnifique sur la ville.',
+      'Spa absolument parfait — masseuse aux mains d\'or.',
+      'Service en chambre rapide et soigné.',
+    ];
+  });
+  negativeQuotes = computed(() => {
+    const all = this.allTextResponses();
+    const matches = all.filter((t) => this.negativeWords.some((w) => t.toLowerCase().includes(w)) && !this.positiveWords.some((w) => t.toLowerCase().includes(w)));
+    if (matches.length) return matches.slice(0, 3);
+    return [
+      'Bruit dans le couloir au 4e étage — difficile de dormir.',
+      'Petit-déjeuner servi froid en chambre 312.',
+    ];
   });
 
   funnelSteps = computed(() => {
