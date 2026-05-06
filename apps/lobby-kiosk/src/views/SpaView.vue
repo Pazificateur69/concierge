@@ -2,28 +2,92 @@
 import { IonPage, IonContent } from '@ionic/vue';
 import KioskHeader from '../components/KioskHeader.vue';
 import Icon from '../components/Icon.vue';
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { api } from '../api';
+import { useTenantStore } from '../stores/tenant';
+import { useI18n } from 'vue-i18n';
+import type { MenuItem } from '@concierge/types';
 
-const treatments = [
-  { name: 'Massage signature', duration: '90 min', price: 165, image: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&q=80', desc: 'Notre rituel exclusif, mêlant pierres chaudes et huiles essentielles bio.' },
-  { name: 'Massage relaxant', duration: '60 min', price: 110, image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800&q=80', desc: 'Soin Suédois traditionnel pour relâcher les tensions musculaires.' },
-  { name: 'Soin du visage anti-âge', duration: '75 min', price: 145, image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&q=80', desc: 'Protocole haute exigence à base d\'actifs concentrés.' },
-  { name: 'Soin du visage hydratant', duration: '60 min', price: 95, image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800&q=80', desc: 'Pour une peau revitalisée et lumineuse.' },
-  { name: 'Hammam & Gommage', duration: '45 min', price: 75, image: 'https://images.unsplash.com/photo-1583416750470-965b2707b355?w=800&q=80', desc: 'Rituel oriental traditionnel au savon noir et gants kessa.' },
-  { name: 'Rituel du couple', duration: '120 min', price: 290, image: 'https://images.unsplash.com/photo-1552693673-1bf958298935?w=800&q=80', desc: 'Cabine privative, deux praticiennes, champagne offert.' },
+const tenantStore = useTenantStore();
+const i18n = useI18n();
+
+// Static visual content (presentation), backed by real API menu items (booking)
+const treatmentVisuals: { matcher: RegExp; image: string; duration: string; description: string }[] = [
+  { matcher: /massage 60|relax/i, image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=900&q=85', duration: '60 min', description: 'Soin Suédois traditionnel pour relâcher les tensions musculaires.' },
+  { matcher: /massage 90|signature/i, image: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=900&q=85', duration: '90 min', description: 'Notre rituel exclusif, mêlant pierres chaudes et huiles essentielles bio.' },
+  { matcher: /visage anti|anti-âge/i, image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=900&q=85', duration: '75 min', description: 'Protocole haute exigence à base d\'actifs concentrés.' },
+  { matcher: /visage|hydratant/i, image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=900&q=85', duration: '60 min', description: 'Pour une peau revitalisée et lumineuse.' },
+  { matcher: /hammam|gommage/i, image: 'https://images.unsplash.com/photo-1583416750470-965b2707b355?w=900&q=85', duration: '45 min', description: 'Rituel oriental traditionnel au savon noir et gants kessa.' },
 ];
 
+const fallbackImage = 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=900&q=85';
+
+const items = ref<MenuItem[]>([]);
+const loading = ref(true);
 const slots = ['10:00', '11:30', '14:00', '15:30', '17:00', '18:30'];
-const selected = ref<typeof treatments[number] | null>(null);
+const selected = ref<MenuItem | null>(null);
 const slot = ref<string | null>(null);
 const room = ref('');
+const submitting = ref(false);
 const sent = ref(false);
+const error = ref<string | null>(null);
 
-function pickTreatment(t: typeof treatments[number]) { selected.value = t; slot.value = null; }
-function confirm() {
-  if (!selected.value || !slot.value || !room.value) return;
-  sent.value = true;
+onMounted(async () => {
+  if (!tenantStore.tenant) return;
+  try {
+    const { data } = await api.get<MenuItem[]>(`/orders/menu?tenantId=${tenantStore.tenant.id}&category=spa`);
+    items.value = data;
+  } catch (e) {
+    console.error(e);
+    error.value = 'Impossible de charger les soins.';
+  } finally {
+    loading.value = false;
+  }
+});
+
+function nameOf(it: MenuItem) {
+  return (it.name as any)[i18n.locale.value] || (it.name as any).fr || Object.values(it.name)[0];
 }
+
+function visualFor(it: MenuItem) {
+  const name = nameOf(it);
+  for (const v of treatmentVisuals) {
+    if (v.matcher.test(name)) return v;
+  }
+  return { image: fallbackImage, duration: '60 min', description: '' };
+}
+
+function pick(it: MenuItem) {
+  selected.value = it;
+  slot.value = null;
+  setTimeout(() => document.querySelector('.spa__booking')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+}
+
+const canSubmit = computed(() => !!(selected.value && slot.value && room.value));
+
+async function confirm() {
+  if (!canSubmit.value || !tenantStore.tenant || !selected.value) return;
+  submitting.value = true;
+  error.value = null;
+  try {
+    await api.post('/orders', {
+      tenantId: tenantStore.tenant.id,
+      room: room.value,
+      items: [{ menuItemId: selected.value.id, quantity: 1, notes: `Créneau ${slot.value}` }],
+      source: 'kiosk',
+      locale: i18n.locale.value,
+      notes: `Réservation spa — ${slot.value} aujourd'hui`,
+    });
+    sent.value = true;
+  } catch (e) {
+    console.error(e);
+    error.value = 'La réservation a échoué. Veuillez réessayer ou contacter la réception.';
+  } finally {
+    submitting.value = false;
+  }
+}
+
+function reset() { sent.value = false; selected.value = null; slot.value = null; room.value = ''; error.value = null; }
 </script>
 
 <template>
@@ -45,26 +109,44 @@ function confirm() {
         <div class="spa__layout">
           <section class="spa__list">
             <span class="eyebrow">La carte des soins</span>
-            <div class="treatments">
+
+            <!-- Loading skeletons -->
+            <div v-if="loading" class="treatments">
+              <article v-for="n in 4" :key="`sk-${n}`" class="treatment treatment--sk">
+                <div class="sk-image"></div>
+                <div class="treatment__body">
+                  <div class="sk-line sk-line--sm"></div>
+                  <div class="sk-line sk-line--lg"></div>
+                  <div class="sk-line"></div>
+                </div>
+              </article>
+            </div>
+
+            <div v-else-if="!items.length" class="empty-state">
+              <span class="eyebrow">Indisponible</span>
+              <p>Aucun soin disponible pour le moment. Veuillez contacter la réception.</p>
+            </div>
+
+            <div v-else class="treatments">
               <article
-                v-for="(t, idx) in treatments"
-                :key="t.name"
+                v-for="(t, idx) in items"
+                :key="t.id"
                 class="treatment"
-                :class="{ active: selected?.name === t.name }"
+                :class="{ active: selected?.id === t.id }"
                 :style="{ animationDelay: `${idx * 60}ms` }"
-                @click="pickTreatment(t)"
+                @click="pick(t)"
               >
                 <div class="treatment__image">
-                  <img :src="t.image" :alt="t.name" loading="lazy" />
+                  <img :src="visualFor(t).image" :alt="nameOf(t)" loading="lazy" />
                 </div>
                 <div class="treatment__body">
                   <span class="treatment__num">{{ String(idx + 1).padStart(2, '0') }}</span>
-                  <h3 class="serif">{{ t.name }}</h3>
-                  <p>{{ t.desc }}</p>
+                  <h3 class="serif">{{ nameOf(t) }}</h3>
+                  <p>{{ visualFor(t).description }}</p>
                   <div class="treatment__meta">
-                    <span class="treatment__duration">{{ t.duration }}</span>
+                    <span class="treatment__duration">{{ visualFor(t).duration }}</span>
                     <span class="treatment__sep">·</span>
-                    <span class="treatment__price serif">{{ t.price }} €</span>
+                    <span class="treatment__price serif">{{ t.price > 0 ? `${t.price.toFixed(2)} €` : 'Inclus' }}</span>
                   </div>
                 </div>
               </article>
@@ -80,8 +162,8 @@ function confirm() {
               </div>
 
               <div v-else>
-                <h3 class="serif booking__name">{{ selected.name }}</h3>
-                <p class="booking__sub">{{ selected.duration }} · {{ selected.price }} €</p>
+                <h3 class="serif booking__name">{{ nameOf(selected) }}</h3>
+                <p class="booking__sub">{{ visualFor(selected).duration }} · {{ selected.price > 0 ? `${selected.price.toFixed(2)} €` : 'Inclus' }}</p>
 
                 <hr class="booking__rule" />
 
@@ -95,9 +177,13 @@ function confirm() {
                 <span class="eyebrow booking__label">Numéro de chambre</span>
                 <input v-model="room" type="tel" inputmode="numeric" placeholder="ex. 204" class="booking__input" />
 
-                <button class="booking__confirm" :disabled="!slot || !room" @click="confirm">
-                  Confirmer la réservation
+                <p v-if="error" class="booking__error">{{ error }}</p>
+
+                <button class="booking__confirm" :disabled="!canSubmit || submitting" @click="confirm">
+                  <span v-if="!submitting">Confirmer la réservation</span>
+                  <span v-else>Envoi en cours…</span>
                 </button>
+                <p class="booking__notice">Notre équipe viendra vous chercher 5 minutes avant le rendez-vous.</p>
               </div>
             </div>
 
@@ -106,12 +192,12 @@ function confirm() {
               <h3 class="serif">Votre soin est réservé.</h3>
               <hr class="booking__rule" />
               <dl class="booking__summary">
-                <div><dt>Soin</dt><dd>{{ selected?.name }}</dd></div>
+                <div><dt>Soin</dt><dd>{{ nameOf(selected!) }}</dd></div>
                 <div><dt>Heure</dt><dd>{{ slot }}</dd></div>
                 <div><dt>Chambre</dt><dd>{{ room }}</dd></div>
               </dl>
-              <p class="booking__detail">Notre équipe viendra vous chercher 5 minutes avant le rendez-vous.</p>
-              <button class="booking__confirm" @click="sent = false; selected = null; slot = null; room = ''">Nouvelle réservation</button>
+              <p class="booking__detail">Notre équipe viendra vous chercher 5 minutes avant le rendez-vous. Un SMS de confirmation va vous parvenir.</p>
+              <button class="booking__confirm" @click="reset">Nouvelle réservation</button>
             </div>
           </aside>
         </div>
@@ -143,7 +229,7 @@ function confirm() {
   overflow: hidden;
 }
 .treatment:hover { border-color: var(--c-ink); transform: translateX(4px); }
-.treatment.active { border-color: var(--c-accent); background: var(--c-paper-soft); }
+.treatment.active { border-color: var(--c-accent); background: var(--c-paper-soft); box-shadow: 0 4px 16px rgba(184,152,90,0.1); }
 
 .treatment__image { aspect-ratio: 4 / 3; overflow: hidden; background: var(--c-paper); }
 .treatment__image img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--dur-slow); }
@@ -159,6 +245,22 @@ function confirm() {
 .treatment__sep { color: var(--c-text-faint); }
 .treatment__price { font-size: 20px; font-weight: 500; color: var(--c-ink); font-feature-settings: 'tnum'; }
 
+/* Skeletons */
+.treatment--sk { pointer-events: none; }
+.sk-image, .sk-line {
+  background: linear-gradient(90deg, var(--c-paper-soft) 0%, var(--c-paper-deep) 50%, var(--c-paper-soft) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+.sk-image { aspect-ratio: 4 / 3; }
+.sk-line { height: 14px; margin: 8px 0; }
+.sk-line--sm { width: 30%; height: 10px; }
+.sk-line--lg { width: 70%; height: 22px; }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+.empty-state { padding: var(--s-12); text-align: center; background: var(--c-bg-card); border: 1px solid var(--c-border); }
+.empty-state p { color: var(--c-text-muted); margin: var(--s-2) 0 0; }
+
 /* BOOKING */
 .spa__booking { position: sticky; top: var(--s-12); align-self: start; }
 .booking { background: var(--c-bg-card); border: 1px solid var(--c-border); padding: var(--s-8); display: flex; flex-direction: column; gap: var(--s-3); }
@@ -171,12 +273,14 @@ function confirm() {
 .booking__empty p { color: var(--c-text-muted); margin: 0; font-size: 14px; }
 
 .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); margin-bottom: var(--s-2); }
-.slot { padding: var(--s-3); background: var(--c-bg-card); border: 1px solid var(--c-border-strong); font-size: 14px; font-weight: 500; font-feature-settings: 'tnum'; transition: all var(--dur-fast); cursor: pointer; color: var(--c-ink); }
+.slot { padding: var(--s-3); background: var(--c-bg-card); border: 1px solid var(--c-border-strong); font-size: 14px; font-weight: 500; font-feature-settings: 'tnum'; transition: all var(--dur-fast); cursor: pointer; color: var(--c-ink); font-family: inherit; }
 .slot:hover { background: var(--c-paper); }
 .slot.active { background: var(--c-ink); color: white; border-color: var(--c-ink); }
 
 .booking__input { padding: var(--s-3) var(--s-4); font-size: 16px; border: 1px solid var(--c-border-strong); background: var(--c-bg-card); transition: border-color var(--dur-fast); margin-bottom: var(--s-4); font-family: inherit; font-feature-settings: 'tnum'; }
 .booking__input:focus { outline: none; border-color: var(--c-ink); }
+
+.booking__error { color: var(--c-danger); font-size: 13px; padding: var(--s-3); background: rgba(145,53,40,0.08); margin: 0 0 var(--s-3); }
 
 .booking__confirm {
   padding: var(--s-4); margin-top: var(--s-3);
@@ -186,6 +290,8 @@ function confirm() {
 }
 .booking__confirm:disabled { opacity: 0.3; cursor: not-allowed; }
 .booking__confirm:not(:disabled):hover { background: var(--c-accent); }
+
+.booking__notice { color: var(--c-text-muted); font-size: 12px; line-height: 1.5; margin: var(--s-2) 0 0; text-align: center; }
 
 .booking--success h3 { font-size: 26px; margin: var(--s-2) 0 0; font-weight: 500; line-height: 1.15; color: var(--c-success); }
 .booking__summary { display: flex; flex-direction: column; gap: var(--s-3); margin: 0 0 var(--s-4); }

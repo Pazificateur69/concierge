@@ -49,13 +49,13 @@ const API = resolveApi();
               </svg>
               <span>Enquêtes</span>
             </button>
-            <button class="nav-item" [class.active]="tab() === 'pois'" (click)="tab.set('pois')">
+            <button class="nav-item" [class.active]="tab() === 'pois'" (click)="tab.set('pois'); loadPois()">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
               </svg>
               <span>Adresses</span>
             </button>
-            <button class="nav-item" [class.active]="tab() === 'menu'" (click)="tab.set('menu')">
+            <button class="nav-item" [class.active]="tab() === 'menu'" (click)="tab.set('menu'); loadMenu()">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M7 2v20M3 2v6a4 4 0 0 0 4 4M21 2l-4 6v14M17 8h4"/>
               </svg>
@@ -250,13 +250,50 @@ const API = resolveApi();
             </div>
           </section>
 
-          <!-- PLACEHOLDER -->
-          <section *ngIf="tab() === 'pois' || tab() === 'menu'" class="content">
-            <div class="card placeholder">
-              <span class="eyebrow">À venir</span>
-              <h3 class="serif">Éditeur visuel — V2</h3>
-              <p>L'API expose déjà les opérations CRUD complètes. Documentation Swagger disponible.</p>
-              <a [href]="apiDocsUrl" target="_blank" class="btn-secondary">Ouvrir Swagger →</a>
+          <!-- POIs -->
+          <section *ngIf="tab() === 'pois'" class="content">
+            <div class="poi-grid">
+              <article *ngFor="let p of pois()" class="poi-row">
+                <div class="poi-row__img" [style.backgroundImage]="'url(' + (p.photo || categoryFallback(p.category)) + ')'"></div>
+                <div class="poi-row__body">
+                  <span class="eyebrow">{{ p.category }}</span>
+                  <h4 class="serif">{{ poiName(p) }}</h4>
+                  <p class="poi-row__meta">
+                    <span *ngIf="p.rating" class="poi-row__rating">★ {{ p.rating.toFixed(1) }}</span>
+                    <span *ngIf="p.rating" class="poi-row__sep">·</span>
+                    <span class="mono">{{ p.lat.toFixed(4) }}, {{ p.lng.toFixed(4) }}</span>
+                    <span *ngIf="p.hours" class="poi-row__sep">·</span>
+                    <span *ngIf="p.hours">{{ p.hours }}</span>
+                  </p>
+                </div>
+                <a [href]="'https://www.openstreetmap.org/?mlat=' + p.lat + '&mlon=' + p.lng + '#map=17/' + p.lat + '/' + p.lng" target="_blank" class="btn-secondary">Voir sur la carte →</a>
+              </article>
+              <div *ngIf="!pois().length" class="empty">Chargement…</div>
+            </div>
+          </section>
+
+          <!-- MENU -->
+          <section *ngIf="tab() === 'menu'" class="content">
+            <div class="menu-toolbar">
+              <div class="filter-group">
+                <button class="filter" *ngFor="let mc of menuCategories" [class.active]="menuFilter() === mc.value" (click)="menuFilter.set(mc.value)">
+                  {{ mc.label }} <span class="filter__count" *ngIf="menuCountByCat(mc.value) as c">{{ c }}</span>
+                </button>
+              </div>
+              <span class="card__hint">{{ filteredMenu().length }} articles · {{ menuTotalValue().toFixed(2) }} € de carte</span>
+            </div>
+            <div class="menu-grid">
+              <article *ngFor="let m of filteredMenu()" class="menu-row">
+                <div class="menu-row__img" [style.backgroundImage]="'url(' + (m.image || foodFallback(m.category)) + ')'"></div>
+                <div class="menu-row__body">
+                  <span class="eyebrow">{{ m.category }}</span>
+                  <h4 class="serif">{{ menuName(m) }}</h4>
+                  <p class="menu-row__sub" *ngIf="m.preparationMinutes">~ {{ m.preparationMinutes }} min de préparation</p>
+                </div>
+                <div class="menu-row__price serif">{{ m.price > 0 ? (m.price.toFixed(2) + ' €') : 'Inclus' }}</div>
+                <span class="menu-row__avail" [class.on]="m.available">{{ m.available ? '● Disponible' : '○ Indisponible' }}</span>
+              </article>
+              <div *ngIf="!filteredMenu().length" class="empty">Aucun plat dans cette catégorie</div>
             </div>
           </section>
         </main>
@@ -429,6 +466,23 @@ const API = resolveApi();
     /* CLICKABLE TABLE */
     .data-table--clickable tbody tr { cursor: pointer; transition: background 0.15s; }
     .data-table--clickable tbody tr:hover { background: var(--c-paper-soft); }
+
+    /* POI / MENU GRID */
+    .poi-grid, .menu-grid { display: flex; flex-direction: column; gap: 1px; background: var(--c-border); border: 1px solid var(--c-border); }
+    .poi-row, .menu-row { display: grid; grid-template-columns: 96px 1fr auto; gap: 16px; padding: 16px 20px; background: var(--c-bg-card); align-items: center; transition: background 0.15s; }
+    .poi-row:hover, .menu-row:hover { background: var(--c-paper-soft); }
+    .poi-row__img, .menu-row__img { width: 96px; height: 64px; background-size: cover; background-position: center; background-color: var(--c-paper); }
+    .poi-row__body, .menu-row__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .poi-row h4, .menu-row h4 { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 500; margin: 2px 0; color: var(--c-ink); letter-spacing: -0.01em; line-height: 1.2; }
+    .poi-row__meta { font-size: 12px; color: var(--c-text-muted); margin: 0; display: flex; gap: 6px; align-items: center; }
+    .poi-row__rating { color: var(--c-accent-deep); }
+    .poi-row__sep { color: var(--c-text-faint); }
+    .menu-row__sub { font-size: 12px; color: var(--c-text-muted); margin: 0; }
+    .menu-row__price { font-size: 22px; color: var(--c-ink); font-feature-settings: 'tnum'; letter-spacing: -0.01em; min-width: 100px; text-align: right; }
+    .menu-row__avail { font-size: 11px; color: var(--c-text-soft); letter-spacing: 0.04em; min-width: 110px; text-align: right; }
+    .menu-row__avail.on { color: var(--c-success); }
+
+    .menu-toolbar { display: flex; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; }
 
     /* DRAWER */
     .drawer-overlay { position: fixed; inset: 0; background: rgba(20,32,46,0.4); backdrop-filter: blur(4px); z-index: 50; animation: fadeIn 0.3s; }
@@ -635,6 +689,53 @@ export class AppComponent implements OnInit {
     return this.orders().filter((o) => o.status === s).length;
   }
 
+  // POIs
+  pois = signal<any[]>([]);
+  poiCategoryFallbacks: Record<string, string> = {
+    restaurant: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=85',
+    monument: 'https://images.unsplash.com/photo-1568322445389-f64ac2515099?w=400&q=85',
+    museum: 'https://images.unsplash.com/photo-1565060169187-5284465b7af2?w=400&q=85',
+    transport: 'https://images.unsplash.com/photo-1581547869738-c6cc9d35a4d7?w=400&q=85',
+    shopping: 'https://images.unsplash.com/photo-1481437156560-3205f6a55735?w=400&q=85',
+    park: 'https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?w=400&q=85',
+    bar: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400&q=85',
+    pharmacy: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&q=85',
+  };
+  categoryFallback(c: string): string { return this.poiCategoryFallbacks[c] || this.poiCategoryFallbacks.monument; }
+  poiName(p: any): string { return p.name?.fr || Object.values(p.name || {})[0] || ''; }
+
+  // Menu
+  menu = signal<any[]>([]);
+  menuFilter = signal<string>('all');
+  menuCategories = [
+    { label: 'Tous', value: 'all' },
+    { label: 'Restauration', value: 'food' },
+    { label: 'Bar', value: 'drink' },
+    { label: 'Spa', value: 'spa' },
+    { label: 'Voiturier', value: 'taxi' },
+    { label: 'Réveil', value: 'wakeup' },
+    { label: 'Service', value: 'housekeeping' },
+  ];
+  foodFallbacks: Record<string, string> = {
+    food: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=85',
+    drink: 'https://images.unsplash.com/photo-1547595628-c61a29f496f0?w=400&q=85',
+    spa: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=85',
+    taxi: 'https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=400&q=85',
+    wakeup: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=85',
+    housekeeping: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&q=85',
+  };
+  foodFallback(c: string): string { return this.foodFallbacks[c] || this.foodFallbacks.food; }
+  menuName(m: any): string { return m.name?.fr || Object.values(m.name || {})[0] || ''; }
+  filteredMenu = computed(() => {
+    const f = this.menuFilter();
+    return f === 'all' ? this.menu() : this.menu().filter((m) => m.category === f);
+  });
+  menuCountByCat(c: string): number {
+    if (c === 'all') return this.menu().length;
+    return this.menu().filter((m) => m.category === c).length;
+  }
+  menuTotalValue = computed(() => this.menu().filter((m) => m.available).reduce((s, m) => s + (m.price || 0), 0));
+
   sparklineDays = computed(() => {
     const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
     const today = new Date().getDay();
@@ -665,7 +766,17 @@ export class AppComponent implements OnInit {
   formatDate(iso: string) { return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
   getTitle(s: Survey) { return (s.title as any).fr || Object.values(s.title)[0]; }
 
-  refresh() { this.loadOrders(); this.loadSurveys(); }
+  refresh() { this.loadOrders(); this.loadSurveys(); this.loadPois(); this.loadMenu(); }
+
+  loadPois() {
+    if (!this.user()?.tenantId) return;
+    this.http.get<any[]>(`${API}/content/pois?tenantId=${this.user().tenantId}`).subscribe((d) => this.pois.set(d));
+  }
+
+  loadMenu() {
+    if (!this.user()?.tenantId) return;
+    this.http.get<any[]>(`${API}/orders/menu?tenantId=${this.user().tenantId}`).subscribe((d) => this.menu.set(d));
+  }
 
   login() {
     this.loginError.set(null);

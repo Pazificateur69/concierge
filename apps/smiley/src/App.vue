@@ -24,6 +24,16 @@ const lang = ref<string>('fr');
 const voiceEnabled = ref(false);
 const hovering = ref<number | null>(null);
 
+const textValue = ref('');
+
+function submitText() {
+  if (!current.value) return;
+  const v = textValue.value.trim();
+  if (current.value.required && !v) return;
+  answer(v);
+  textValue.value = '';
+}
+
 const offlineQueue: any[] = JSON.parse(localStorage.getItem('smiley_queue') || '[]');
 
 onMounted(async () => {
@@ -269,10 +279,24 @@ function getOptionColor(value: number) {
 
             <!-- TEXT -->
             <div v-else-if="current.type === 'text'" class="text-q">
-              <textarea ref="textRef" placeholder="Vos commentaires (optionnel)…" class="text-q__input" rows="5"></textarea>
-              <button class="text-q__send" @click="answer(($refs.textRef as HTMLTextAreaElement)?.value || '')">
-                Envoyer
-              </button>
+              <textarea
+                v-model="textValue"
+                :placeholder="current.required ? 'Vos commentaires…' : 'Vos commentaires (optionnel)…'"
+                class="text-q__input"
+                rows="5"
+              ></textarea>
+              <div class="text-q__bar">
+                <span class="text-q__count" :class="{ ok: textValue.trim().length > 0 }">
+                  {{ textValue.length }} caractère{{ textValue.length > 1 ? 's' : '' }}
+                </span>
+                <button
+                  class="text-q__send"
+                  :disabled="current.required && !textValue.trim()"
+                  @click="submitText"
+                >
+                  {{ current.required && !textValue.trim() ? 'Saisissez un message' : 'Envoyer' }}
+                </button>
+              </div>
             </div>
 
             <div class="q__actions">
@@ -463,8 +487,12 @@ function getOptionColor(value: number) {
 .text-q { display: flex; flex-direction: column; gap: 12px; max-width: 640px; width: 100%; margin-top: 32px; }
 .text-q__input { padding: 18px; font-size: 17px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); resize: none; min-height: 160px; font-family: inherit; transition: border-color 0.2s; color: var(--c-ink); line-height: 1.55; }
 .text-q__input:focus { outline: none; border-color: var(--c-ink); }
-.text-q__send { align-self: flex-end; padding: 14px 32px; font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; background: var(--c-ink); color: white; border: none; cursor: pointer; transition: background 0.2s; }
-.text-q__send:hover { background: var(--c-accent-deep); }
+.text-q__bar { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); padding-top: 4px; }
+.text-q__count { font-size: 11px; color: var(--c-text-soft); letter-spacing: 0.06em; font-feature-settings: 'tnum'; }
+.text-q__count.ok { color: var(--c-accent-deep); font-weight: 600; }
+.text-q__send { padding: 14px 32px; font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; background: var(--c-ink); color: white; border: none; cursor: pointer; transition: all 0.2s; }
+.text-q__send:disabled { opacity: 0.3; cursor: not-allowed; }
+.text-q__send:not(:disabled):hover { background: var(--c-accent-deep); }
 
 /* THANKS */
 .thanks { text-align: center; max-width: 700px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
