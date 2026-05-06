@@ -1,45 +1,58 @@
 <script setup lang="ts">
 import { IonPage, IonContent } from '@ionic/vue';
 import KioskHeader from '../components/KioskHeader.vue';
+import Icon from '../components/Icon.vue';
 
 const services = [
-  { icon: '🛎️', title: 'Conciergerie 24/7', desc: 'Notre équipe est à votre disposition à toute heure pour toute demande.', tag: 'Inclus' },
-  { icon: '🧖‍♀️', title: 'Spa & Bien-être', desc: 'Soins, massages, hammam et sauna. Réservation depuis votre chambre ou la borne.', tag: '110 € / soin' },
-  { icon: '🏊', title: 'Piscine & Fitness', desc: 'Accès libre 6h–23h pour les résidents. Salle de sport climatisée.', tag: 'Inclus' },
-  { icon: '🚕', title: 'Service Taxi', desc: 'Réservation immédiate, paiement à l\'arrivée. Navette aéroport possible.', tag: 'Sur demande' },
-  { icon: '👔', title: 'Pressing & Blanchisserie', desc: 'Service 4h ou express 1h. Dépôt à la réception ou en chambre.', tag: 'À partir de 12 €' },
-  { icon: '🍷', title: 'Room Service 24/7', desc: 'Restaurant complet directement en chambre, à toute heure.', tag: 'Voir menu' },
-  { icon: '🚗', title: 'Voiturier', desc: 'Service de voiturier 24h/24 pour vous et vos invités.', tag: 'Inclus' },
-  { icon: '👶', title: 'Service de garde', desc: 'Baby-sitting et activités enfants sur réservation.', tag: '20 € / heure' },
-  { icon: '💼', title: 'Centre d\'affaires', desc: 'Salle de réunion, imprimante, scan, secrétariat trilingue.', tag: 'Sur réservation' },
+  { icon: 'bell', title: 'Conciergerie', desc: 'Notre équipe est joignable jour et nuit pour orchestrer votre séjour.', tag: 'Inclus', hours: 'Sans interruption' },
+  { icon: 'spa', title: 'Spa & Bien-être', desc: 'Soins, massages, hammam et sauna. Réservation directe en chambre.', tag: 'Sur réservation', hours: '9h — 21h' },
+  { icon: 'restaurant', title: 'Service en chambre', desc: 'Restaurant complet livré à votre porte, à toute heure.', tag: 'Voir la carte', hours: 'Sans interruption' },
+  { icon: 'pin', title: 'Voiturier', desc: 'Notre service voiturier accueille vos véhicules et ceux de vos invités.', tag: 'Inclus', hours: 'Sans interruption' },
+  { icon: 'phone', title: 'Service de taxi', desc: 'Taxi, berline ou navette aéroport. Paiement à l\'arrivée.', tag: 'Sur demande', hours: 'Sans interruption' },
+  { icon: 'sun', title: 'Piscine & Fitness', desc: 'Bassin chauffé et salle de sport climatisée pour les résidents.', tag: 'Inclus', hours: '6h — 23h' },
+  { icon: 'mail', title: 'Pressing', desc: 'Service de blanchisserie 4 heures, ou express en 1 heure.', tag: 'À partir de 12 €', hours: '7h — 22h' },
+  { icon: 'help', title: 'Garde d\'enfants', desc: 'Baby-sitting et activités encadrées par notre équipe certifiée.', tag: '20 € / heure', hours: 'Sur réservation' },
+  { icon: 'wifi', title: 'Wi-Fi & Centre d\'affaires', desc: 'Connexion fibre gratuite, salles de réunion équipées.', tag: 'Inclus', hours: 'Sans interruption' },
 ];
 </script>
 
 <template>
   <ion-page>
-    <KioskHeader :title="$t('services.title')" />
+    <KioskHeader title="Services" />
     <ion-content :fullscreen="true">
       <div class="services">
-        <div class="services__hero fade-in-up">
-          <span class="services__chip">⭐ Tous nos services</span>
-          <h1 class="font-display">{{ $t('services.title') }}</h1>
-          <p>{{ $t('services.subtitle') }}</p>
-        </div>
+        <header class="services__hero fade-up">
+          <span class="eyebrow">Tous nos services</span>
+          <h1 class="serif">
+            Une <em>attention</em> permanente,<br/>
+            une discrétion absolue.
+          </h1>
+          <p>Chaque service de la maison est pensé pour rendre votre séjour aussi simple qu'agréable.</p>
+        </header>
+
+        <hr class="rule" />
 
         <div class="services__grid">
-          <div
+          <article
             v-for="(s, idx) in services"
             :key="s.title"
-            class="service-card"
-            :style="{ animationDelay: `${idx * 60}ms` }"
+            class="srv"
+            :style="{ animationDelay: `${idx * 50}ms` }"
           >
-            <div class="service-card__top">
-              <span class="service-card__icon">{{ s.icon }}</span>
-              <span class="service-card__tag">{{ s.tag }}</span>
+            <div class="srv__head">
+              <div class="srv__icon">
+                <Icon :name="s.icon" :size="22" :stroke="1.2" />
+              </div>
+              <span class="srv__num">{{ String(idx + 1).padStart(2, '0') }}</span>
             </div>
-            <h3 class="service-card__title font-display">{{ s.title }}</h3>
-            <p class="service-card__desc">{{ s.desc }}</p>
-          </div>
+            <h3 class="srv__title serif">{{ s.title }}</h3>
+            <p class="srv__desc">{{ s.desc }}</p>
+            <hr class="srv__sep" />
+            <div class="srv__meta">
+              <span class="eyebrow srv__tag">{{ s.tag }}</span>
+              <span class="srv__hours">{{ s.hours }}</span>
+            </div>
+          </article>
         </div>
       </div>
     </ion-content>
@@ -47,51 +60,42 @@ const services = [
 </template>
 
 <style scoped>
-.services { min-height: calc(100vh - 80px); padding: var(--s-12) var(--s-8) var(--s-16); max-width: 1280px; margin: 0 auto; }
+.services { min-height: calc(100vh - 80px); padding: var(--s-12) var(--s-8) var(--s-20); max-width: 1280px; margin: 0 auto; }
 
-.services__hero { text-align: center; margin-bottom: var(--s-12); }
-.services__chip {
-  display: inline-block; padding: var(--s-2) var(--s-4);
-  background: var(--c-accent); color: white;
-  border-radius: var(--r-full);
-  font-size: 13px; font-weight: 700;
-  letter-spacing: 0.05em; margin-bottom: var(--s-4);
-}
-.services__hero h1 { font-size: clamp(36px, 5vw, 56px); margin: 0 0 var(--s-3); color: var(--c-text); }
-.services__hero p { color: var(--c-text-muted); font-size: 20px; margin: 0; }
+.services__hero { text-align: center; max-width: 720px; margin: 0 auto var(--s-12); }
+.services__hero h1 { font-size: clamp(36px, 5vw, 56px); line-height: 1.15; margin: var(--s-3) 0 var(--s-4); font-weight: 500; }
+.services__hero h1 em { color: var(--c-accent-deep); font-style: italic; }
+.services__hero p { color: var(--c-text-muted); font-size: 16px; line-height: 1.6; margin: 0; }
 
-.services__grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--s-5);
-}
+.rule { margin: var(--s-12) auto; max-width: 200px; }
 
-.service-card {
+.services__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--c-border); border-left: 1px solid var(--c-border); }
+
+.srv {
+  padding: var(--s-8);
+  border-right: 1px solid var(--c-border);
+  border-bottom: 1px solid var(--c-border);
+  display: flex; flex-direction: column; gap: var(--s-4);
   background: var(--c-bg-card);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-xl);
-  padding: var(--s-6);
-  display: flex; flex-direction: column; gap: var(--s-3);
   transition: all var(--dur-base);
-  box-shadow: var(--sh-xs);
-  animation: fadeInUp 0.5s var(--ease-smooth) both;
+  animation: fadeUp 0.6s var(--ease-soft) both;
+  min-height: 280px;
 }
-.service-card:hover { transform: translateY(-3px); box-shadow: var(--sh-md); border-color: var(--c-primary-100); }
+.srv:hover { background: var(--c-paper); }
 
-.service-card__top { display: flex; justify-content: space-between; align-items: flex-start; }
-.service-card__icon {
-  width: 64px; height: 64px;
-  background: var(--c-bg-soft);
-  border-radius: var(--r-md);
-  display: grid; place-items: center;
-  font-size: 36px;
-}
-.service-card__tag {
-  background: var(--c-primary-50); color: var(--c-primary);
-  padding: 4px 12px; border-radius: var(--r-full);
-  font-size: 12px; font-weight: 700;
-  letter-spacing: 0.04em; text-transform: uppercase;
-}
+.srv__head { display: flex; justify-content: space-between; align-items: flex-start; }
+.srv__icon { width: 48px; height: 48px; background: var(--c-ink); color: var(--c-paper); display: grid; place-items: center; }
+.srv__num { font-family: var(--c-font-display); font-size: 14px; font-weight: 500; color: var(--c-text-soft); letter-spacing: 0.05em; font-feature-settings: 'tnum'; }
 
-.service-card__title { font-size: 22px; margin: var(--s-2) 0 0; color: var(--c-text); }
-.service-card__desc { color: var(--c-text-muted); font-size: 15px; line-height: 1.5; margin: 0; }
+.srv__title { font-size: 26px; line-height: 1.15; margin: 0; font-weight: 500; color: var(--c-ink); letter-spacing: -0.01em; }
+.srv__desc { color: var(--c-text-muted); font-size: 15px; line-height: 1.55; margin: 0; flex: 1; }
+
+.srv__sep { width: 32px; height: 1px; background: var(--c-rule); border: 0; margin: var(--s-2) 0; }
+
+.srv__meta { display: flex; justify-content: space-between; align-items: baseline; }
+.srv__tag { color: var(--c-accent-deep); font-size: 10px; }
+.srv__hours { font-size: 12px; color: var(--c-text-soft); font-feature-settings: 'tnum'; letter-spacing: 0.02em; }
+
+@media (max-width: 900px) { .services__grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .services__grid { grid-template-columns: 1fr; } }
 </style>
