@@ -477,10 +477,18 @@ export class AppComponent implements OnInit {
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    const stored = localStorage.getItem('admin_auth');
-    if (stored) {
-      const data = JSON.parse(stored);
-      this.token = data.token; this.user.set(data.user); this.loggedIn.set(true); this.refresh();
+    try {
+      const stored = localStorage.getItem('admin_auth');
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data?.token && data?.user) {
+          this.token = data.token; this.user.set(data.user); this.loggedIn.set(true); this.refresh();
+        } else {
+          localStorage.removeItem('admin_auth');
+        }
+      }
+    } catch {
+      localStorage.removeItem('admin_auth');
     }
   }
 

@@ -22,7 +22,7 @@ const currentQuestion = ref(0);
 const answers = ref<SurveyAnswer[]>([]);
 const lang = ref<string>('fr');
 const voiceEnabled = ref(false);
-const slideDirection = ref<'forward' | 'backward'>('forward');
+const hovering = ref<number | null>(null);
 
 const offlineQueue: any[] = JSON.parse(localStorage.getItem('smiley_queue') || '[]');
 
@@ -31,13 +31,6 @@ onMounted(async () => {
     const tenantResp = await axios.get(`${API_URL}/tenants/${tenantSlug}`);
     tenantId.value = tenantResp.data.id;
     tenantName.value = tenantResp.data.name;
-    if (tenantResp.data.theme) {
-      const t = tenantResp.data.theme;
-      const root = document.documentElement;
-      root.style.setProperty('--c-primary', t.primaryColor);
-      root.style.setProperty('--c-accent', t.accentColor);
-    }
-
     const surveyResp = await axios.get(`${API_URL}/surveys/${surveySlug}?tenantId=${tenantId.value}`);
     survey.value = surveyResp.data;
     step.value = 'question';
@@ -71,11 +64,6 @@ const visibleQuestions = computed<Question[]>(() => {
 const current = computed<Question | undefined>(() => visibleQuestions.value[currentQuestion.value]);
 const progress = computed(() => Math.round(((currentQuestion.value + 1) / Math.max(visibleQuestions.value.length, 1)) * 100));
 
-const surveyTitle = computed(() => {
-  if (!survey.value) return '';
-  return (survey.value.title as any)[lang.value] || (survey.value.title as any).fr || '';
-});
-
 function speak(text: string) {
   if (!voiceEnabled.value || typeof speechSynthesis === 'undefined') return;
   speechSynthesis.cancel();
@@ -89,30 +77,17 @@ function answer(value: string | number) {
   if (!current.value) return;
   answers.value = answers.value.filter((a) => a.questionId !== current.value!.id);
   answers.value.push({ questionId: current.value.id, value });
-  setTimeout(() => next(), 400);
+  setTimeout(() => next(), 380);
 }
 
-function back() {
-  if (currentQuestion.value > 0) {
-    slideDirection.value = 'backward';
-    currentQuestion.value--;
-  }
-}
-
-function skip() {
-  slideDirection.value = 'forward';
-  next();
-}
+function back() { if (currentQuestion.value > 0) currentQuestion.value--; }
+function skip() { next(); }
 
 async function next() {
-  slideDirection.value = 'forward';
   if (currentQuestion.value < visibleQuestions.value.length - 1) {
     currentQuestion.value++;
     nextTick(() => {
-      if (current.value) {
-        const lbl = (current.value.label as any)[lang.value] || (current.value.label as any).fr;
-        speak(lbl);
-      }
+      if (current.value) speak((current.value.label as any)[lang.value] || (current.value.label as any).fr);
     });
   } else {
     await submit();
@@ -121,16 +96,11 @@ async function next() {
 
 async function submit() {
   if (!survey.value) return;
-  const payload = {
-    answers: answers.value,
-    locale: lang.value,
-    metadata: { device: 'kiosk-checkout', room },
-  };
+  const payload = { answers: answers.value, locale: lang.value, metadata: { device: 'kiosk-checkout', room } };
   try {
     await axios.post(`${API_URL}/surveys/${surveySlug}/responses?tenantId=${tenantId.value}`, payload);
     step.value = 'thanks';
   } catch (e) {
-    console.warn('Submit failed, queuing offline', e);
     offlineQueue.push({ tenantId: tenantId.value, surveySlug, payload });
     localStorage.setItem('smiley_queue', JSON.stringify(offlineQueue));
     step.value = 'thanks';
@@ -140,121 +110,172 @@ async function submit() {
 async function flushQueue() {
   while (offlineQueue.length) {
     const next = offlineQueue.shift()!;
-    try {
-      await axios.post(`${API_URL}/surveys/${next.surveySlug}/responses?tenantId=${next.tenantId}`, next.payload);
-    } catch {
-      offlineQueue.unshift(next);
-      break;
-    }
+    try { await axios.post(`${API_URL}/surveys/${next.surveySlug}/responses?tenantId=${next.tenantId}`, next.payload); }
+    catch { offlineQueue.unshift(next); break; }
   }
   localStorage.setItem('smiley_queue', JSON.stringify(offlineQueue));
 }
 
-function reset() {
-  currentQuestion.value = 0;
-  answers.value = [];
-  step.value = 'question';
-}
-
+function reset() { currentQuestion.value = 0; answers.value = []; step.value = 'question'; }
 function reload() { window.location.reload(); }
+
+// Score config — refined editorial
+const SCORES = [
+  { value: 1, label: { fr: 'Très décevant', en: 'Very disappointing', de: 'Sehr enttäuschend' }, color: '#913528', tone: -1 },
+  { value: 2, label: { fr: 'Décevant', en: 'Disappointing', de: 'Enttäuschend' }, color: '#95701a', tone: 0 },
+  { value: 3, label: { fr: 'Bien', en: 'Good', de: 'Gut' }, color: '#5a6675', tone: 1 },
+  { value: 4, label: { fr: 'Excellent', en: 'Excellent', de: 'Hervorragend' }, color: '#36644a', tone: 2 },
+];
+
+function getOptionLabel(value: number) {
+  const s = SCORES.find((s) => s.value === value);
+  if (!s) return '';
+  return (s.label as any)[lang.value] || s.label.fr;
+}
+function getOptionColor(value: number) {
+  return SCORES.find((s) => s.value === value)?.color ?? '#14202e';
+}
 </script>
 
 <template>
   <ion-app>
     <div class="smiley">
-      <!-- Header -->
+      <!-- Subtle texture overlay -->
+      <div class="smiley__texture"></div>
+
+      <!-- HEADER -->
       <header class="hdr">
-        <div class="hdr__brand font-display">{{ tenantName }}</div>
+        <div class="hdr__brand">
+          <span class="hdr__mark">C</span>
+          <div class="hdr__brand-text">
+            <span class="hdr__eyebrow">Avant de partir</span>
+            <span class="hdr__hotel serif italic">{{ tenantName }}</span>
+          </div>
+        </div>
         <div class="hdr__controls">
-          <button
-            class="hdr__btn"
-            :class="{ on: voiceEnabled }"
-            @click="voiceEnabled = !voiceEnabled"
-            aria-label="Voix"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-              <path d="M3 10v4a1 1 0 0 0 1 1h3l4 4V5L7 9H4a1 1 0 0 0-1 1zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/>
+          <button class="hdr__btn" :class="{ active: voiceEnabled }" @click="voiceEnabled = !voiceEnabled" aria-label="Voix">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
             </svg>
           </button>
           <select v-model="lang" class="hdr__lang">
-            <option value="fr">🇫🇷 Français</option>
-            <option value="en">🇬🇧 English</option>
-            <option value="de">🇩🇪 Deutsch</option>
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
           </select>
         </div>
       </header>
 
-      <!-- Progress -->
-      <div class="progress" v-if="step === 'question'">
-        <div class="progress__bar" :style="{ width: progress + '%' }"></div>
-        <div class="progress__label">
-          {{ currentQuestion + 1 }} / {{ visibleQuestions.length }}
+      <!-- PROGRESS -->
+      <div v-if="step === 'question'" class="progress">
+        <div class="progress__steps">
+          <span class="progress__num serif">{{ String(currentQuestion + 1).padStart(2, '0') }}</span>
+          <span class="progress__sep">／</span>
+          <span class="progress__total serif">{{ String(visibleQuestions.length).padStart(2, '0') }}</span>
         </div>
+        <div class="progress__bar"><div class="progress__fill" :style="{ width: progress + '%' }"></div></div>
       </div>
 
       <main class="main">
-        <!-- Loading -->
-        <div v-if="step === 'loading'" class="loading">
-          <div class="loading__spinner"></div>
-          <p>Chargement…</p>
+        <!-- LOADING -->
+        <div v-if="step === 'loading'" class="state">
+          <div class="state__spinner"></div>
+          <span class="eyebrow">Chargement</span>
         </div>
 
-        <!-- Question -->
-        <transition :name="slideDirection === 'forward' ? 'slide-fwd' : 'slide-bwd'" mode="out-in">
-          <div
-            v-if="step === 'question' && current"
-            :key="current.id"
-            class="question"
-          >
-            <div v-if="surveyTitle" class="question__category">{{ surveyTitle }}</div>
-            <h1 class="question__label font-display">
+        <!-- QUESTION -->
+        <transition name="q" mode="out-in">
+          <div v-if="step === 'question' && current" :key="current.id" class="q">
+            <span class="eyebrow q__eyebrow">{{ tenantName }} · Évaluation</span>
+            <h1 class="q__label serif">
               {{ (current.label as any)[lang] || (current.label as any).fr }}
             </h1>
+            <p v-if="(current.description as any)?.[lang] || (current.description as any)?.fr" class="q__desc">
+              {{ (current.description as any)[lang] || (current.description as any).fr }}
+            </p>
 
-            <!-- Smiley type -->
+            <!-- SMILEY -->
             <div v-if="current.type === 'smiley'" class="smileys">
               <button
                 v-for="(opt, idx) in current.options"
                 :key="String(opt.value)"
-                class="smiley-btn"
-                :style="{ animationDelay: `${idx * 80}ms` }"
+                class="smiley-card"
+                :style="{ animationDelay: `${idx * 100}ms`, '--accent': getOptionColor(Number(opt.value)) }"
+                @mouseenter="hovering = Number(opt.value)"
+                @mouseleave="hovering = null"
                 @click="answer(opt.value)"
               >
-                <span class="smiley-btn__icon">{{ opt.icon }}</span>
-                <span class="smiley-btn__label">
-                  {{ (opt.label as any)[lang] || (opt.label as any).fr }}
-                </span>
+                <span class="smiley-card__num eyebrow">{{ String(idx + 1).padStart(2, '0') }}</span>
+
+                <!-- Refined SVG face per score -->
+                <svg viewBox="0 0 120 120" class="face" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="60" cy="60" r="54" />
+                  <!-- Eyes vary by score -->
+                  <template v-if="opt.value === 1">
+                    <!-- Sad : closed-ish drooping eyes + downward mouth -->
+                    <path d="M40 50 L48 54 M50 54 L42 50" />
+                    <path d="M70 54 L78 50 M80 50 L72 54" />
+                    <path d="M40 84 Q60 70, 80 84" />
+                  </template>
+                  <template v-else-if="opt.value === 2">
+                    <!-- Disappointed : flat eyes + flat mouth -->
+                    <path d="M40 50 L52 50" />
+                    <path d="M68 50 L80 50" />
+                    <path d="M42 78 L78 78" />
+                  </template>
+                  <template v-else-if="opt.value === 3">
+                    <!-- Good : dot eyes + gentle smile -->
+                    <circle cx="46" cy="50" r="2" fill="currentColor" />
+                    <circle cx="74" cy="50" r="2" fill="currentColor" />
+                    <path d="M40 70 Q60 84, 80 70" />
+                  </template>
+                  <template v-else-if="opt.value === 4">
+                    <!-- Excellent : crescent eyes + big smile + cheeks -->
+                    <path d="M40 50 Q46 44, 52 50" />
+                    <path d="M68 50 Q74 44, 80 50" />
+                    <path d="M36 66 Q60 92, 84 66" />
+                    <circle cx="32" cy="72" r="2.5" stroke-width="0" fill="currentColor" opacity="0.25" />
+                    <circle cx="88" cy="72" r="2.5" stroke-width="0" fill="currentColor" opacity="0.25" />
+                  </template>
+                </svg>
+
+                <div class="smiley-card__bottom">
+                  <span class="smiley-card__label serif italic">
+                    {{ (opt.label as any)[lang] || (opt.label as any).fr || getOptionLabel(Number(opt.value)) }}
+                  </span>
+                  <span class="smiley-card__rule"></span>
+                </div>
               </button>
             </div>
 
-            <!-- NPS type -->
+            <!-- NPS -->
             <div v-else-if="current.type === 'nps'" class="nps">
-              <div class="nps__hint">
-                <span>Pas du tout</span>
-                <span>Tout à fait</span>
+              <div class="nps__legend">
+                <span class="serif italic">Pas du tout</span>
+                <span class="serif italic">Tout à fait</span>
               </div>
               <div class="nps__row">
                 <button v-for="n in 11" :key="n - 1" class="nps-btn" :data-score="n - 1" @click="answer(n - 1)">
                   {{ n - 1 }}
                 </button>
               </div>
+              <div class="nps__scale">
+                <span class="nps__band nps__band--bad">Détracteurs</span>
+                <span class="nps__band nps__band--mid">Neutres</span>
+                <span class="nps__band nps__band--good">Promoteurs</span>
+              </div>
             </div>
 
-            <!-- Text type -->
+            <!-- TEXT -->
             <div v-else-if="current.type === 'text'" class="text-q">
-              <textarea
-                ref="textRef"
-                placeholder="Partagez vos commentaires (optionnel)…"
-                class="text-q__input"
-                rows="4"
-              ></textarea>
+              <textarea ref="textRef" placeholder="Vos commentaires (optionnel)…" class="text-q__input" rows="5"></textarea>
               <button class="text-q__send" @click="answer(($refs.textRef as HTMLTextAreaElement)?.value || '')">
-                Envoyer →
+                Envoyer
               </button>
             </div>
 
-            <!-- Footer actions -->
-            <div class="question__actions">
+            <div class="q__actions">
               <button v-if="currentQuestion > 0" class="btn-ghost" @click="back">← Retour</button>
               <span v-else></span>
               <button v-if="!current.required" class="btn-ghost" @click="skip">Passer →</button>
@@ -262,256 +283,217 @@ function reload() { window.location.reload(); }
           </div>
         </transition>
 
-        <!-- Thanks -->
-        <div v-if="step === 'thanks'" class="thanks scale-in">
-          <div class="thanks__check">
-            <svg viewBox="0 0 60 60" width="80" height="80">
-              <circle cx="30" cy="30" r="28" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
-              <path d="M18 31 L26 39 L43 21" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <h2 class="thanks__title font-display">Merci !</h2>
-          <p class="thanks__desc">Votre avis nous est précieux.<br />Bon voyage et à bientôt 👋</p>
+        <!-- THANKS -->
+        <div v-if="step === 'thanks'" class="thanks">
+          <span class="eyebrow">Merci</span>
+          <svg viewBox="0 0 80 80" width="64" height="64" class="thanks__check" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="40" cy="40" r="38" stroke-dasharray="240" stroke-dashoffset="0" />
+            <path d="M24 42 L34 52 L56 28" />
+          </svg>
+          <h2 class="thanks__title serif">
+            <em>Vos retours</em><br/>
+            façonnent notre maison.
+          </h2>
+          <hr class="thanks__rule" />
+          <p class="thanks__desc">Bon voyage, et au plaisir de vous accueillir à nouveau.</p>
           <button class="thanks__cta" @click="reset">Nouvelle évaluation</button>
         </div>
 
-        <!-- Error -->
-        <div v-if="step === 'error'" class="error">
-          <span>⚠️</span>
-          <p>Erreur de chargement.</p>
-          <button @click="reload">Réessayer</button>
+        <!-- ERROR -->
+        <div v-if="step === 'error'" class="state state--error">
+          <span class="eyebrow">Service momentanément indisponible</span>
+          <h2 class="serif">Veuillez réessayer dans un instant</h2>
+          <button @click="reload" class="thanks__cta">Réessayer</button>
         </div>
       </main>
+
+      <footer class="foot">
+        <span class="eyebrow">Concierge · Dymension</span>
+      </footer>
     </div>
   </ion-app>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap');
+
 .smiley {
-  min-height: 100vh;
-  display: flex; flex-direction: column;
-  background: linear-gradient(135deg, #f8f7f1 0%, #ffffff 50%, #faf6ee 100%);
-  position: relative;
-  overflow: hidden;
+  --c-primary: #14202e;
+  --c-accent: #b8985a;
+  --c-accent-soft: #d6bd87;
+  --c-accent-deep: #8e7138;
+  --c-paper: #f5f0e8;
+  --c-paper-soft: #ede5d6;
+  --c-bg-card: #ffffff;
+  --c-ink: #14202e;
+  --c-text: #14202e;
+  --c-text-muted: #5a6675;
+  --c-text-soft: #97a0ad;
+  --c-text-faint: #b9c0c9;
+  --c-border: rgba(20,32,46,0.08);
+  --c-border-strong: rgba(20,32,46,0.18);
+  --c-rule: #d8cfbe;
+  --c-success: #36644a;
+  --c-danger: #913528;
+
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  font-feature-settings: 'ss01';
+  min-height: 100vh; display: flex; flex-direction: column;
+  background: var(--c-paper);
+  position: relative; overflow: hidden;
+  color: var(--c-text);
 }
-.smiley::before {
-  content: ''; position: absolute; inset: 0;
+
+.smiley__texture {
+  position: absolute; inset: 0; pointer-events: none;
   background-image:
-    radial-gradient(circle at 10% 0%, rgba(212, 168, 90, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 90% 100%, rgba(26, 77, 140, 0.08) 0%, transparent 50%);
-  pointer-events: none;
+    radial-gradient(ellipse at top right, rgba(184,152,90,0.10) 0%, transparent 45%),
+    radial-gradient(ellipse at bottom left, rgba(20,32,46,0.04) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent 0, transparent 39px, rgba(20,32,46,0.015) 39px, rgba(20,32,46,0.015) 40px);
 }
 
-.hdr {
-  position: relative; z-index: 1;
-  display: flex; justify-content: space-between; align-items: center;
-  padding: var(--s-5) var(--s-8);
-}
-.hdr__brand { font-size: 24px; color: var(--c-primary, #1a4d8c); }
-.hdr__controls { display: flex; gap: var(--s-3); }
-.hdr__btn {
-  width: 52px; height: 52px;
-  background: rgba(255,255,255,0.8); backdrop-filter: blur(8px);
-  border: 1px solid rgba(0,0,0,0.08); border-radius: var(--r-md);
-  display: grid; place-items: center;
-  color: var(--c-text-muted, #5e6470);
-}
-.hdr__btn.on {
-  background: var(--c-accent, #d4a85a); color: white;
-  border-color: var(--c-accent, #d4a85a);
-}
-.hdr__lang {
-  padding: var(--s-3) var(--s-4);
-  background: rgba(255,255,255,0.8);
-  border: 1px solid rgba(0,0,0,0.08); border-radius: var(--r-md);
-  font-size: 16px; font-weight: 600; color: var(--c-text, #1a1d24);
-  min-height: 52px;
-}
+.serif { font-family: 'Cormorant Garamond', serif; font-weight: 500; }
+.italic { font-style: italic; }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c-accent-deep); }
 
-.progress {
-  position: relative; z-index: 1;
-  padding: 0 var(--s-8);
-  display: flex; align-items: center; gap: var(--s-4);
-}
-.progress__bar {
-  position: relative; flex: 1; height: 6px;
-  background: rgba(26,77,140,0.1);
-  border-radius: var(--r-full);
-  overflow: hidden;
-  transition: none;
-}
-.progress__bar::before {
-  content: ''; position: absolute; inset: 0; right: auto;
-  width: 100%; background: linear-gradient(90deg, var(--c-primary, #1a4d8c), var(--c-accent, #d4a85a));
-  border-radius: inherit;
-  transition: width 0.5s var(--ease-smooth);
-}
-.progress { gap: var(--s-4); }
-.progress__bar { height: 6px; background: rgba(26,77,140,0.12); border-radius: 999px; }
-.progress__bar { background: var(--c-bg-soft); }
-.progress__bar { transition: width 0.5s ease; }
-.progress__bar { width: var(--w, 0%); }
-.progress__bar { background: linear-gradient(90deg, var(--c-primary, #1a4d8c), var(--c-accent, #d4a85a)); }
-.progress__label { font-size: 14px; font-weight: 600; color: var(--c-text-muted, #5e6470); font-feature-settings: 'tnum'; min-width: 60px; }
+/* HEADER */
+.hdr { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 24px 48px; }
+.hdr__brand { display: flex; align-items: center; gap: 14px; }
+.hdr__mark { width: 44px; height: 44px; background: var(--c-ink); color: var(--c-paper); display: grid; place-items: center; font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; }
+.hdr__brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+.hdr__eyebrow { font-size: 9px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--c-text-soft); }
+.hdr__hotel { font-size: 19px; color: var(--c-ink); margin-top: 3px; }
 
-.main {
-  position: relative; z-index: 1;
-  flex: 1;
-  display: flex; align-items: center; justify-content: center;
-  padding: var(--s-12) var(--s-8);
-}
+.hdr__controls { display: flex; gap: 8px; align-items: center; }
+.hdr__btn { width: 40px; height: 40px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); color: var(--c-text-muted); display: grid; place-items: center; cursor: pointer; transition: all 0.2s; }
+.hdr__btn:hover { background: var(--c-paper-soft); }
+.hdr__btn.active { background: var(--c-accent); border-color: var(--c-accent); color: white; }
+.hdr__lang { padding: 8px 12px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); font-size: 14px; color: var(--c-ink); font-family: inherit; min-height: 40px; }
 
-.loading { display: flex; flex-direction: column; align-items: center; gap: var(--s-4); color: var(--c-text-muted, #5e6470); }
-.loading__spinner {
-  width: 56px; height: 56px;
-  border: 4px solid rgba(26,77,140,0.15);
-  border-top-color: var(--c-primary, #1a4d8c);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
+/* PROGRESS */
+.progress { position: relative; z-index: 1; padding: 0 96px; max-width: 1100px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.progress__steps { display: flex; align-items: baseline; gap: 6px; font-size: 14px; color: var(--c-text-muted); letter-spacing: 0.04em; }
+.progress__num { color: var(--c-ink); font-weight: 600; font-feature-settings: 'tnum'; }
+.progress__sep { color: var(--c-text-faint); font-size: 18px; }
+.progress__total { color: var(--c-text-muted); font-feature-settings: 'tnum'; }
+.progress__bar { height: 1px; background: var(--c-border-strong); position: relative; }
+.progress__fill { position: absolute; left: 0; top: -1px; height: 3px; background: linear-gradient(90deg, var(--c-ink), var(--c-accent-deep)); transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+/* MAIN */
+.main { position: relative; z-index: 1; flex: 1; display: flex; align-items: center; justify-content: center; padding: 60px 48px; }
+
+.state { display: flex; flex-direction: column; align-items: center; gap: 16px; color: var(--c-text-muted); }
+.state__spinner { width: 32px; height: 32px; border: 1.5px solid var(--c-border-strong); border-top-color: var(--c-ink); border-radius: 50%; animation: spin 1s linear infinite; }
+.state--error { gap: 24px; text-align: center; }
+.state--error h2 { font-size: 28px; margin: 0; color: var(--c-ink); font-weight: 500; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.question {
-  text-align: center; max-width: 1100px; width: 100%;
-  display: flex; flex-direction: column; align-items: center; gap: var(--s-6);
-}
-.question__category {
-  display: inline-block; padding: var(--s-2) var(--s-4);
-  background: rgba(212,168,90,0.15); color: var(--c-accent-dark, #a8843f);
-  border-radius: var(--r-full);
-  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-}
-.question__label {
-  font-size: clamp(28px, 4.5vw, 56px);
-  line-height: 1.15; margin: 0;
-  color: var(--c-text, #1a1d24);
-  max-width: 900px;
-}
-.question__actions {
-  display: flex; justify-content: space-between; width: 100%; max-width: 900px;
-  margin-top: var(--s-8);
-}
-.btn-ghost {
-  padding: var(--s-3) var(--s-5);
-  background: transparent; border: none; color: var(--c-text-muted, #5e6470);
-  font-size: 16px; font-weight: 600;
-  border-radius: var(--r-md);
-  transition: all var(--dur-fast);
-}
-.btn-ghost:hover { background: rgba(0,0,0,0.04); color: var(--c-text, #1a1d24); }
+/* QUESTION */
+.q { text-align: center; max-width: 1200px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.q__eyebrow { color: var(--c-accent-deep); font-size: 10px; }
+.q__label { font-size: clamp(32px, 5.5vw, 64px); line-height: 1.1; margin: 8px 0 0; color: var(--c-ink); max-width: 1000px; font-weight: 500; letter-spacing: -0.02em; }
+.q__desc { font-size: 17px; color: var(--c-text-muted); margin: 0; max-width: 640px; line-height: 1.55; }
 
-/* Smileys */
+.q__actions { display: flex; justify-content: space-between; width: 100%; max-width: 900px; margin-top: 32px; }
+.btn-ghost { padding: 10px 18px; background: transparent; border: 1px solid transparent; color: var(--c-text-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; transition: all 0.2s; cursor: pointer; }
+.btn-ghost:hover { color: var(--c-ink); border-color: var(--c-border-strong); }
+
+/* SMILEYS — Editorial cards */
 .smileys {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  gap: var(--s-5); width: 100%; max-width: 1000px;
-  margin-top: var(--s-6);
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+  width: 100%; max-width: 1100px; margin-top: 40px;
+  border-top: 1px solid var(--c-border);
+  border-left: 1px solid var(--c-border);
 }
-.smiley-btn {
-  background: white; border: 2px solid transparent;
-  border-radius: var(--r-xl); padding: var(--s-8) var(--s-4);
-  display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
-  box-shadow: 0 4px 16px rgba(20,30,50,0.06);
-  transition: all 0.25s var(--ease-smooth);
-  animation: fadeInUp 0.5s var(--ease-smooth) both;
+.smiley-card {
+  position: relative;
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-top: none; border-left: none;
+  padding: 32px 20px 28px;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  transition: all 0.4s cubic-bezier(0.32,0.72,0,1);
+  animation: fadeUp 0.6s cubic-bezier(0.32,0.72,0,1) both;
   cursor: pointer;
+  color: var(--c-ink);
+  overflow: hidden;
 }
-.smiley-btn:hover { transform: translateY(-6px); box-shadow: 0 14px 32px rgba(20,30,50,0.12); border-color: var(--c-accent, #d4a85a); }
-.smiley-btn:active { transform: translateY(-2px) scale(0.98); }
-.smiley-btn__icon { font-size: 96px; line-height: 1; transition: transform 0.3s ease; }
-.smiley-btn:hover .smiley-btn__icon { transform: scale(1.1); }
-.smiley-btn__label { font-size: 17px; font-weight: 600; color: var(--c-text, #1a1d24); }
+.smiley-card::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 2px; background: var(--accent);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
+}
+.smiley-card:hover { background: var(--c-paper-soft); transform: translateY(-4px); }
+.smiley-card:hover::after { transform: scaleX(1); }
+.smiley-card:hover .face { color: var(--accent); transform: scale(1.05); }
+.smiley-card:hover .smiley-card__rule { width: 48px; background: var(--accent); }
+.smiley-card:active { transform: translateY(-1px) scale(0.98); }
+
+.smiley-card__num { color: var(--c-text-soft); font-size: 9px; align-self: flex-start; }
+.face { color: var(--c-ink); transition: all 0.4s cubic-bezier(0.32,0.72,0,1); width: 96px; height: 96px; }
+
+.smiley-card__bottom { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.smiley-card__label { font-size: 19px; color: var(--c-ink); line-height: 1.2; }
+.smiley-card__rule { width: 24px; height: 1px; background: var(--c-rule); transition: all 0.4s; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
 /* NPS */
-.nps { display: flex; flex-direction: column; gap: var(--s-4); width: 100%; max-width: 900px; margin-top: var(--s-6); }
-.nps__hint { display: flex; justify-content: space-between; color: var(--c-text-muted, #5e6470); font-size: 14px; padding: 0 var(--s-3); }
-.nps__row { display: grid; grid-template-columns: repeat(11, 1fr); gap: var(--s-2); }
+.nps { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 900px; margin-top: 40px; }
+.nps__legend { display: flex; justify-content: space-between; color: var(--c-text-muted); font-size: 15px; padding: 0 8px; }
+.nps__row { display: grid; grid-template-columns: repeat(11, 1fr); gap: 6px; }
 .nps-btn {
-  aspect-ratio: 1; min-height: 64px;
-  background: white; border: 2px solid var(--c-border-strong, rgba(0,0,0,0.15));
-  border-radius: var(--r-md);
-  font-size: 22px; font-weight: 700; color: var(--c-text, #1a1d24);
-  transition: all var(--dur-fast);
-  cursor: pointer;
+  aspect-ratio: 1; min-height: 60px;
+  background: var(--c-bg-card); border: 1px solid var(--c-border-strong);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px; font-weight: 500; color: var(--c-ink);
+  transition: all 0.2s; cursor: pointer;
+  font-feature-settings: 'tnum';
 }
-.nps-btn[data-score="0"], .nps-btn[data-score="1"], .nps-btn[data-score="2"], .nps-btn[data-score="3"], .nps-btn[data-score="4"], .nps-btn[data-score="5"], .nps-btn[data-score="6"] { color: #c44b3f; border-color: rgba(196,75,63,0.3); }
-.nps-btn[data-score="7"], .nps-btn[data-score="8"] { color: #c4861d; border-color: rgba(196,134,29,0.3); }
-.nps-btn[data-score="9"], .nps-btn[data-score="10"] { color: #2d7a4b; border-color: rgba(45,122,75,0.3); }
-.nps-btn:hover { background: var(--c-primary, #1a4d8c); color: white !important; border-color: var(--c-primary, #1a4d8c); transform: scale(1.06); }
+.nps-btn:hover { background: var(--c-ink); color: white; border-color: var(--c-ink); transform: translateY(-2px); }
+.nps__scale { display: grid; grid-template-columns: 7fr 2fr 2fr; gap: 6px; }
+.nps__band { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; padding: 4px 0; text-align: center; }
+.nps__band--bad { color: var(--c-danger); border-top: 2px solid currentColor; }
+.nps__band--mid { color: var(--c-warning, #95701a); border-top: 2px solid currentColor; }
+.nps__band--good { color: var(--c-success); border-top: 2px solid currentColor; }
 
-/* Text */
-.text-q { display: flex; flex-direction: column; gap: var(--s-4); max-width: 720px; width: 100%; margin: 0 auto; margin-top: var(--s-6); }
-.text-q__input {
-  padding: var(--s-5); font-size: 18px;
-  background: white; border: 2px solid var(--c-border-strong, rgba(0,0,0,0.15));
-  border-radius: var(--r-md);
-  resize: none; min-height: 140px;
-  font-family: inherit;
-  transition: border-color var(--dur-fast);
-}
-.text-q__input:focus { outline: none; border-color: var(--c-primary, #1a4d8c); }
-.text-q__send {
-  align-self: flex-end;
-  padding: var(--s-4) var(--s-8); font-size: 17px; font-weight: 700;
-  background: var(--c-primary, #1a4d8c); color: white;
-  border: none; border-radius: var(--r-md);
-  min-height: 56px;
-  cursor: pointer;
-}
+/* TEXT */
+.text-q { display: flex; flex-direction: column; gap: 12px; max-width: 640px; width: 100%; margin-top: 32px; }
+.text-q__input { padding: 18px; font-size: 17px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); resize: none; min-height: 160px; font-family: inherit; transition: border-color 0.2s; color: var(--c-ink); line-height: 1.55; }
+.text-q__input:focus { outline: none; border-color: var(--c-ink); }
+.text-q__send { align-self: flex-end; padding: 14px 32px; font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; background: var(--c-ink); color: white; border: none; cursor: pointer; transition: background 0.2s; }
+.text-q__send:hover { background: var(--c-accent-deep); }
 
-/* Thanks */
-.thanks {
-  text-align: center; max-width: 700px;
-  display: flex; flex-direction: column; align-items: center; gap: var(--s-5);
-  color: var(--c-text, #1a1d24);
-}
-.thanks__check {
-  width: 160px; height: 160px;
-  background: linear-gradient(135deg, var(--c-primary, #1a4d8c), var(--c-accent, #d4a85a));
-  color: white;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  margin-bottom: var(--s-3);
-  box-shadow: 0 16px 40px rgba(26,77,140,0.3);
-  animation: pulse 2s ease-in-out infinite;
-}
-.thanks__title { font-size: clamp(48px, 7vw, 80px); margin: 0; line-height: 1; }
-.thanks__desc { font-size: 22px; line-height: 1.5; color: var(--c-text-muted, #5e6470); margin: 0; }
-.thanks__cta {
-  margin-top: var(--s-6);
-  padding: var(--s-4) var(--s-12); font-size: 17px; font-weight: 700;
-  background: var(--c-primary, #1a4d8c); color: white;
-  border: none; border-radius: var(--r-md);
-  cursor: pointer;
-  transition: all var(--dur-fast);
-}
-.thanks__cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,77,140,0.3); }
+/* THANKS */
+.thanks { text-align: center; max-width: 700px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.thanks__check { color: var(--c-success); margin: 8px 0; }
+.thanks__check circle { animation: drawCircle 0.8s ease-out forwards; transform-origin: center; }
+.thanks__check path { stroke-dasharray: 60; stroke-dashoffset: 60; animation: drawCheck 0.5s ease-out 0.5s forwards; }
+@keyframes drawCircle { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes drawCheck { to { stroke-dashoffset: 0; } }
 
-/* Error */
-.error { display: flex; flex-direction: column; align-items: center; gap: var(--s-4); }
-.error span { font-size: 64px; }
-.error button {
-  padding: var(--s-3) var(--s-6);
-  background: var(--c-primary, #1a4d8c); color: white;
-  border: none; border-radius: var(--r-md);
-  font-weight: 700; cursor: pointer;
-}
+.thanks__title { font-size: clamp(40px, 6vw, 72px); margin: 0; line-height: 1.1; color: var(--c-ink); font-weight: 500; }
+.thanks__title em { color: var(--c-accent-deep); font-style: italic; }
+.thanks__rule { width: 56px; height: 1px; background: var(--c-accent); border: 0; margin: 24px auto; }
+.thanks__desc { font-size: 17px; line-height: 1.6; color: var(--c-text-muted); margin: 0 0 24px; }
+.thanks__cta { padding: 16px 40px; font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; background: var(--c-ink); color: white; border: none; cursor: pointer; transition: all 0.2s; }
+.thanks__cta:hover { background: var(--c-accent-deep); transform: translateY(-1px); }
 
-/* Slide animations */
-.slide-fwd-enter-active, .slide-fwd-leave-active,
-.slide-bwd-enter-active, .slide-bwd-leave-active {
-  transition: all 0.4s var(--ease-smooth);
-}
-.slide-fwd-enter-from { opacity: 0; transform: translateX(40px); }
-.slide-fwd-leave-to { opacity: 0; transform: translateX(-40px); }
-.slide-bwd-enter-from { opacity: 0; transform: translateX(-40px); }
-.slide-bwd-leave-to { opacity: 0; transform: translateX(40px); }
+/* FOOTER */
+.foot { padding: 24px 48px; text-align: center; border-top: 1px solid var(--c-border); }
 
-@media (max-width: 800px) {
+/* TRANSITIONS */
+.q-enter-active, .q-leave-active { transition: all 0.45s cubic-bezier(0.32,0.72,0,1); }
+.q-enter-from { opacity: 0; transform: translateY(20px); }
+.q-leave-to { opacity: 0; transform: translateY(-20px); }
+
+@media (max-width: 1000px) {
   .smileys { grid-template-columns: repeat(2, 1fr); }
-  .smiley-btn__icon { font-size: 64px; }
-  .nps__row { grid-template-columns: repeat(6, 1fr); }
 }
-
-/* Set CSS var for progress bar width via inline style */
-.progress__bar { width: 100%; }
+@media (max-width: 700px) {
+  .nps__row { grid-template-columns: repeat(6, 1fr); }
+  .progress { padding: 0 24px; }
+}
 </style>

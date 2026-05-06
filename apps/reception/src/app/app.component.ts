@@ -99,7 +99,7 @@ const API = resolveApi();
               <div class="card__room">
                 <span class="card__room-label eyebrow">Chambre</span>
                 <span class="card__room-num serif">{{ order.room }}</span>
-                <span v-if="order.guestName" class="card__guest">{{ order.guestName }}</span>
+                <span *ngIf="order.guestName" class="card__guest">{{ order.guestName }}</span>
               </div>
 
               <ul class="card__items">
@@ -335,15 +335,23 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    const stored = localStorage.getItem('reception_auth');
-    if (stored) {
-      const data = JSON.parse(stored);
-      this.token = data.token;
-      this.user.set(data.user);
-      this.tenantName.set(data.tenantName ?? '');
-      this.loggedIn.set(true);
-      this.connectSocket();
-      this.loadOrders();
+    try {
+      const stored = localStorage.getItem('reception_auth');
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data?.token && data?.user) {
+          this.token = data.token;
+          this.user.set(data.user);
+          this.tenantName.set(data.tenantName ?? '');
+          this.loggedIn.set(true);
+          this.connectSocket();
+          this.loadOrders();
+        } else {
+          localStorage.removeItem('reception_auth');
+        }
+      }
+    } catch {
+      localStorage.removeItem('reception_auth');
     }
     this.tickClock();
     this.timerInterval = setInterval(() => this.tickClock(), 30000);
