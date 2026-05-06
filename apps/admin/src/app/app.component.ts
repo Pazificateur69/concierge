@@ -197,17 +197,25 @@ const API = resolveApi();
 
           <!-- ORDERS -->
           <section *ngIf="tab() === 'orders'" class="content">
+            <div class="orders-toolbar">
+              <input type="search" [(ngModel)]="searchQuery" placeholder="Rechercher une commande, une chambre, un article…" class="search" (input)="searchSig.set(searchQuery)" />
+              <div class="filter-group">
+                <button class="filter" *ngFor="let f of statusFilters" [class.active]="statusFilter() === f.value" (click)="statusFilter.set(f.value)">
+                  {{ f.label }}<span class="filter__count" *ngIf="countByStatus(f.value) as c">{{ c }}</span>
+                </button>
+              </div>
+            </div>
             <div class="card">
               <header class="card__head">
-                <h3 class="serif">Toutes les commandes</h3>
-                <span class="card__hint">{{ orders().length }} au total</span>
+                <h3 class="serif">{{ filteredOrdersList().length }} commande{{ filteredOrdersList().length > 1 ? 's' : '' }}</h3>
+                <span class="card__hint">{{ orders().length }} au total · CA total {{ totalRevenue().toFixed(2) }} €</span>
               </header>
-              <table class="data-table">
+              <table class="data-table data-table--clickable">
                 <thead>
                   <tr><th>Réf</th><th>Chambre</th><th>Détail</th><th class="ta-right">Montant</th><th>État</th><th>Source</th><th>Date</th></tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let o of orders()">
+                  <tr *ngFor="let o of filteredOrdersList()" (click)="detailOrder.set(o)">
                     <td><span class="mono">{{ o.id.slice(-6).toUpperCase() }}</span></td>
                     <td><strong>{{ o.room }}</strong></td>
                     <td class="small">
@@ -219,6 +227,7 @@ const API = resolveApi();
                     <td class="text-muted small">{{ o.source }}</td>
                     <td class="text-muted small">{{ formatDate(o.createdAt) }}</td>
                   </tr>
+                  <tr *ngIf="!filteredOrdersList().length"><td colspan="7" class="empty">Aucune commande ne correspond aux filtres.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -252,6 +261,40 @@ const API = resolveApi();
           </section>
         </main>
       </div>
+
+      <!-- ORDER DETAIL DRAWER -->
+      <div class="drawer-overlay" *ngIf="!!detailOrder()" (click)="detailOrder.set(null)"></div>
+      <aside class="drawer" [class.open]="!!detailOrder()" *ngIf="detailOrder() as o">
+        <header class="drawer__head">
+          <div>
+            <span class="eyebrow">Commande</span>
+            <h2 class="serif">#{{ o.id.slice(-6).toUpperCase() }}</h2>
+          </div>
+          <button class="drawer__close" (click)="detailOrder.set(null)" aria-label="Fermer">×</button>
+        </header>
+        <div class="drawer__body">
+          <div class="dr-row"><span class="eyebrow">Statut</span><span class="tag tag--{{ o.status }}">{{ statusLabel(o.status) }}</span></div>
+          <div class="dr-row"><span class="eyebrow">Chambre</span><span class="serif" style="font-size: 22px;">{{ o.room }}</span></div>
+          <div class="dr-row" *ngIf="o.guestName"><span class="eyebrow">Client</span><span>{{ o.guestName }}</span></div>
+          <div class="dr-row"><span class="eyebrow">Source</span><span>{{ o.source }}</span></div>
+          <div class="dr-row"><span class="eyebrow">Date</span><span class="mono">{{ formatDate(o.createdAt) }}</span></div>
+
+          <hr class="rule" style="margin: 24px 0;" />
+          <span class="eyebrow">Articles ({{ o.items.length }})</span>
+          <ul class="dr-items">
+            <li *ngFor="let it of o.items">
+              <span class="serif" style="color: var(--c-accent-deep); font-feature-settings: 'tnum';">{{ it.quantity }}×</span>
+              <div>
+                <span style="display:block; font-weight: 500;">{{ it.name }}</span>
+                <span *ngIf="it.options?.length" style="font-size: 11px; color: var(--c-text-soft);">{{ it.options?.join(' · ') }}</span>
+              </div>
+              <span class="serif" style="font-feature-settings: 'tnum';">{{ (it.unitPrice * it.quantity).toFixed(2) }} €</span>
+            </li>
+          </ul>
+          <hr class="rule" style="margin: 16px 0;" />
+          <div class="dr-row"><span class="eyebrow">Total</span><span class="serif" style="font-size: 28px; letter-spacing: -0.02em; font-feature-settings: 'tnum';">{{ o.total.toFixed(2) }} €</span></div>
+        </div>
+      </aside>
     </ng-container>
 
     <ng-template #loginTpl>
@@ -369,6 +412,47 @@ const API = resolveApi();
     /* RULE */
     .rule + .content { margin-top: 32px; }
 
+    /* ORDERS TOOLBAR */
+    .orders-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .search { padding: 10px 14px; min-width: 320px; flex: 1; max-width: 460px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); font-size: 14px; color: var(--c-ink); font-family: inherit; transition: all 0.2s; }
+    .search:focus { outline: none; border-color: var(--c-ink); }
+    .search::placeholder { color: var(--c-text-soft); }
+
+    .filter-group { display: flex; gap: 0; border: 1px solid var(--c-border); }
+    .filter { padding: 8px 14px; background: var(--c-bg-card); border: none; border-right: 1px solid var(--c-border); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-text-muted); cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+    .filter:last-child { border-right: none; }
+    .filter:hover { background: var(--c-paper); color: var(--c-ink); }
+    .filter.active { background: var(--c-ink); color: white; }
+    .filter__count { background: rgba(0,0,0,0.10); padding: 1px 6px; font-size: 10px; font-feature-settings: 'tnum'; }
+    .filter.active .filter__count { background: rgba(255,255,255,0.18); }
+
+    /* CLICKABLE TABLE */
+    .data-table--clickable tbody tr { cursor: pointer; transition: background 0.15s; }
+    .data-table--clickable tbody tr:hover { background: var(--c-paper-soft); }
+
+    /* DRAWER */
+    .drawer-overlay { position: fixed; inset: 0; background: rgba(20,32,46,0.4); backdrop-filter: blur(4px); z-index: 50; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .drawer {
+      position: fixed; right: 0; top: 0; bottom: 0;
+      width: 480px; max-width: 90vw;
+      background: var(--c-bg-card); border-left: 1px solid var(--c-border);
+      display: flex; flex-direction: column;
+      z-index: 51;
+      transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
+      box-shadow: -32px 0 64px rgba(20,32,46,0.18);
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer__head { padding: 24px; border-bottom: 1px solid var(--c-border); display: flex; justify-content: space-between; align-items: flex-start; }
+    .drawer__head h2 { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 500; margin: 4px 0 0; color: var(--c-ink); letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+    .drawer__close { width: 36px; height: 36px; background: var(--c-paper); border: none; font-size: 24px; color: var(--c-text-muted); cursor: pointer; display: grid; place-items: center; line-height: 1; }
+    .drawer__close:hover { background: var(--c-ink); color: white; }
+    .drawer__body { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .dr-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--c-border); }
+    .dr-row:last-child { border-bottom: none; }
+    .dr-items { list-style: none; padding: 0; margin: 12px 0; display: flex; flex-direction: column; gap: 12px; }
+    .dr-items li { display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; padding: 8px 0; }
+
     /* KPIs */
     .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--c-border); margin-bottom: 32px; }
     .kpi { padding: 24px 28px; border-right: 1px solid var(--c-border); background: var(--c-bg-card); display: flex; flex-direction: column; gap: 8px; }
@@ -471,6 +555,18 @@ export class AppComponent implements OnInit {
   orders = signal<Order[]>([]);
   surveys = signal<Survey[]>([]);
   stats = signal<SurveyStats | null>(null);
+  searchQuery = '';
+  searchSig = signal('');
+  statusFilter = signal<'all' | 'pending' | 'accepted' | 'preparing' | 'delivered' | 'cancelled'>('all');
+  detailOrder = signal<Order | null>(null);
+  statusFilters = [
+    { label: 'Toutes', value: 'all' as const },
+    { label: 'Reçues', value: 'pending' as const },
+    { label: 'Acceptées', value: 'accepted' as const },
+    { label: 'En préparation', value: 'preparing' as const },
+    { label: 'Livrées', value: 'delivered' as const },
+    { label: 'Annulées', value: 'cancelled' as const },
+  ];
   apiDocsUrl = `${API}/api/docs`;
   private token = '';
 
@@ -515,6 +611,29 @@ export class AppComponent implements OnInit {
   ordersInProgress = computed(() => this.orders().filter((o) => ['pending', 'accepted', 'preparing'].includes(o.status)).length);
   recentOrders = computed(() => [...this.orders()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 6));
   userInitial = computed(() => (this.user()?.firstName?.charAt(0) || 'A').toUpperCase());
+  totalRevenue = computed(() => this.orders().filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0));
+
+  filteredOrdersList = computed(() => {
+    const q = this.searchSig().trim().toLowerCase();
+    const sf = this.statusFilter();
+    return [...this.orders()]
+      .filter((o) => sf === 'all' || o.status === sf)
+      .filter((o) => {
+        if (!q) return true;
+        return (
+          o.id.toLowerCase().includes(q) ||
+          o.room.toLowerCase().includes(q) ||
+          (o.guestName ?? '').toLowerCase().includes(q) ||
+          o.items.some((it) => it.name.toLowerCase().includes(q))
+        );
+      })
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  });
+
+  countByStatus(s: string): number {
+    if (s === 'all') return this.orders().length;
+    return this.orders().filter((o) => o.status === s).length;
+  }
 
   sparklineDays = computed(() => {
     const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];

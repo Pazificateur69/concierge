@@ -130,6 +130,19 @@ function reset() { sent.value = false; room.value = ''; }
           </div>
 
           <div class="items-grid">
+            <!-- Skeletons while loading -->
+            <article v-if="loading" v-for="n in 6" :key="`sk-${n}`" class="item item--skeleton">
+              <div class="item__image skeleton-shimmer"></div>
+              <div class="item__body">
+                <div class="sk-line sk-line--lg"></div>
+                <div class="sk-line sk-line--sm"></div>
+                <div class="item__bottom">
+                  <div class="sk-line sk-line--md"></div>
+                  <div class="sk-pill"></div>
+                </div>
+              </div>
+            </article>
+
             <article v-for="it in filteredItems" :key="it.id" class="item">
               <div class="item__image">
                 <img :src="imageFor(it)" :alt="itemName(it)" loading="lazy" />
@@ -152,7 +165,7 @@ function reset() { sent.value = false; room.value = ''; }
                 </div>
               </div>
             </article>
-            <div v-if="loading && !filteredItems.length" class="empty">Chargement de la carte…</div>
+            <div v-if="!loading && !filteredItems.length" class="empty">Aucun plat disponible dans cette catégorie.</div>
           </div>
         </div>
 
@@ -295,6 +308,31 @@ function reset() { sent.value = false; room.value = ''; }
 }
 .qty__btn:hover { background: var(--c-paper); }
 .qty__num { font-weight: 600; min-width: 28px; text-align: center; font-size: 13px; font-feature-settings: 'tnum'; }
+
+/* SKELETONS */
+.item--skeleton { pointer-events: none; }
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--c-paper-soft) 0%, var(--c-paper-deep) 50%, var(--c-paper-soft) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+.sk-line {
+  height: 14px; background: var(--c-paper-soft);
+  background: linear-gradient(90deg, var(--c-paper-soft) 0%, var(--c-paper-deep) 50%, var(--c-paper-soft) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+  margin: 8px 0;
+}
+.sk-line--sm { width: 30%; height: 10px; }
+.sk-line--md { width: 40%; }
+.sk-line--lg { width: 70%; height: 18px; }
+.sk-pill {
+  width: 80px; height: 32px; background: var(--c-paper-soft);
+  background: linear-gradient(90deg, var(--c-paper-soft) 0%, var(--c-paper-deep) 50%, var(--c-paper-soft) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
 /* CART SIDE */
 .cart { background: var(--c-paper); border-left: 1px solid var(--c-border); display: flex; flex-direction: column; }

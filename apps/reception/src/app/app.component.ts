@@ -47,6 +47,7 @@ const API = resolveApi();
         </div>
 
         <div class="topbar__right">
+          <input type="search" [(ngModel)]="searchQuery" placeholder="Rechercher…" class="search" (input)="searchSig.set(searchQuery)" />
           <button class="topbar-btn" (click)="soundEnabled.set(!soundEnabled())" [class.active]="soundEnabled()" aria-label="Son">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 5L6 9H2v6h4l5 4V5z"/>
@@ -90,6 +91,7 @@ const API = resolveApi();
               draggable="true"
               (dragstart)="onDragStart($event, order)"
               (dragend)="onDragEnd($event)"
+              (click)="openDetail(order)"
             >
               <header class="card__head">
                 <span class="card__id mono">{{ order.id.slice(-6).toUpperCase() }}</span>
@@ -103,10 +105,11 @@ const API = resolveApi();
               </div>
 
               <ul class="card__items">
-                <li *ngFor="let it of order.items">
+                <li *ngFor="let it of order.items.slice(0, 3)">
                   <span class="card__item-qty">{{ it.quantity }}</span>
                   <span class="card__item-name">{{ it.name }}</span>
                 </li>
+                <li *ngIf="order.items.length > 3" class="card__more">+ {{ order.items.length - 3 }} autres</li>
               </ul>
 
               <footer class="card__foot">
@@ -114,7 +117,7 @@ const API = resolveApi();
                 <span class="card__source eyebrow">{{ sourceLabel(order.source) }}</span>
               </footer>
 
-              <div class="card__actions" *ngIf="col.next">
+              <div class="card__actions" *ngIf="col.next" (click)="$event.stopPropagation()">
                 <button class="action action--primary" (click)="updateStatus(order, col.next)">{{ col.actionLabel }}</button>
                 <button class="action action--ghost" (click)="updateStatus(order, 'cancelled')" *ngIf="col.status !== 'delivered'" aria-label="Annuler">×</button>
               </div>
@@ -126,6 +129,82 @@ const API = resolveApi();
           </div>
         </section>
       </main>
+
+      <!-- Order detail panel -->
+      <aside class="detail" [class.open]="!!detailOrder()" *ngIf="detailOrder() as o">
+        <header class="detail__head">
+          <div>
+            <span class="eyebrow">Commande</span>
+            <h2 class="serif">#{{ o.id.slice(-6).toUpperCase() }}</h2>
+          </div>
+          <button class="detail__close" (click)="detailOrder.set(null)" aria-label="Fermer">×</button>
+        </header>
+
+        <div class="detail__body">
+          <div class="detail__row">
+            <span class="eyebrow">Statut</span>
+            <span class="tag tag--{{ o.status }}">{{ statusLabel(o.status) }}</span>
+          </div>
+          <div class="detail__row">
+            <span class="eyebrow">Chambre</span>
+            <span class="serif detail__room">{{ o.room }}</span>
+          </div>
+          <div class="detail__row" *ngIf="o.guestName">
+            <span class="eyebrow">Client</span>
+            <span>{{ o.guestName }}</span>
+          </div>
+          <div class="detail__row">
+            <span class="eyebrow">Source</span>
+            <span>{{ sourceLabel(o.source) }}</span>
+          </div>
+          <div class="detail__row">
+            <span class="eyebrow">Reçue il y a</span>
+            <span class="mono">{{ minutesAgo(o.createdAt) }} minutes</span>
+          </div>
+
+          <hr class="rule" />
+
+          <span class="eyebrow">Articles ({{ o.items.length }})</span>
+          <ul class="detail__items">
+            <li *ngFor="let it of o.items">
+              <span class="detail__item-qty serif">{{ it.quantity }}×</span>
+              <div class="detail__item-body">
+                <span>{{ it.name }}</span>
+                <span class="detail__item-options" *ngIf="it.options?.length">{{ it.options?.join(' · ') }}</span>
+                <span class="detail__item-notes" *ngIf="it.notes">« {{ it.notes }} »</span>
+              </div>
+              <span class="detail__item-price serif">{{ (it.unitPrice * it.quantity).toFixed(2) }} €</span>
+            </li>
+          </ul>
+
+          <hr class="rule" />
+
+          <div class="detail__total">
+            <span class="eyebrow">Total</span>
+            <span class="serif detail__total-amount">{{ o.total.toFixed(2) }} €</span>
+          </div>
+
+          <hr class="rule" />
+
+          <span class="eyebrow">Historique</span>
+          <ol class="timeline">
+            <li *ngFor="let s of o.statusHistory">
+              <span class="timeline__dot"></span>
+              <div>
+                <span class="timeline__status">{{ statusLabel(s.status) }}</span>
+                <span class="timeline__time mono">{{ formatDateTime(s.at) }}</span>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <footer class="detail__foot" *ngIf="nextStatus(o.status) as next">
+          <button class="action action--primary action--big" (click)="updateStatus(o, next); detailOrder.set(null)">
+            Faire passer en {{ statusLabel(next) }} →
+          </button>
+        </footer>
+      </aside>
+      <div class="detail-overlay" *ngIf="!!detailOrder()" (click)="detailOrder.set(null)"></div>
     </div>
 
     <ng-template #loginTpl>
@@ -188,7 +267,7 @@ const API = resolveApi();
     .serif { font-family: 'Cormorant Garamond', serif; font-weight: 500; }
     .mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.06em; }
     .eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c-accent-deep); }
-    .rule { border: 0; height: 1px; background: var(--c-border); margin: 0; }
+    .rule { border: 0; height: 1px; background: var(--c-border); margin: 16px 0; }
 
     .reception { display: flex; flex-direction: column; height: 100vh; background: var(--c-bg); overflow: hidden; }
 
@@ -204,25 +283,25 @@ const API = resolveApi();
 
     .status { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--c-border-strong); }
     .status__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-warning); }
-    .status.live .status__dot { background: var(--c-success); animation: pulse 2s ease-in-out infinite; }
+    .status.live .status__dot { background: var(--c-success); animation: dot-pulse 2s ease-in-out infinite; }
     .status__text { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-text-muted); }
     .status__time { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: var(--c-ink); border-left: 1px solid var(--c-border); padding-left: 8px; font-feature-settings: 'tnum'; }
-
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 var(--c-success); }
-      50% { box-shadow: 0 0 0 4px transparent; }
-    }
+    @keyframes dot-pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--c-success); } 50% { box-shadow: 0 0 0 4px transparent; } }
 
     .kpis { display: flex; gap: 0; justify-content: center; border: 1px solid var(--c-border); }
     .kpi { padding: 6px 16px; border-right: 1px solid var(--c-border); display: flex; flex-direction: column; gap: 2px; min-width: 90px; align-items: center; }
     .kpi:last-child { border-right: none; }
     .kpi--accent { background: var(--c-ink); color: var(--c-paper); }
-    .kpi--accent .eyebrow { color: var(--c-accent-soft, #d6bd87); }
+    .kpi--accent .eyebrow { color: #d6bd87; }
     .kpi__num { font-size: 22px; line-height: 1; font-weight: 500; color: var(--c-ink); font-feature-settings: 'tnum'; letter-spacing: -0.02em; }
     .kpi--accent .kpi__num { color: white; }
     .kpi__currency { font-family: 'Cormorant Garamond', serif; font-size: 14px; opacity: 0.6; margin-left: 2px; }
 
     .topbar__right { display: flex; align-items: center; gap: 8px; }
+    .search { padding: 6px 12px; min-width: 200px; background: var(--c-paper); border: 1px solid var(--c-border-strong); font-size: 13px; color: var(--c-ink); font-family: inherit; transition: all 0.2s; }
+    .search:focus { outline: none; border-color: var(--c-ink); background: var(--c-bg-card); min-width: 280px; }
+    .search::placeholder { color: var(--c-text-soft); }
+
     .topbar-btn { width: 36px; height: 36px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); color: var(--c-text-muted); cursor: pointer; display: grid; place-items: center; transition: all 0.2s; }
     .topbar-btn:hover { background: var(--c-paper); }
     .topbar-btn.active { background: var(--c-accent); border-color: var(--c-accent); color: white; }
@@ -234,25 +313,16 @@ const API = resolveApi();
     .kanban { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--c-border); padding: 1px; overflow: hidden; }
     .col { background: var(--c-bg); display: flex; flex-direction: column; min-height: 0; }
     .col[data-status="pending"] .col__head { background: rgba(149,112,26,0.05); }
-
     .col__head { padding: 16px 20px; border-bottom: 1px solid var(--c-border); }
     .col__title { display: flex; justify-content: space-between; align-items: baseline; }
     .col__count { font-size: 26px; font-weight: 500; line-height: 1; color: var(--c-ink); font-feature-settings: 'tnum'; }
-
     .col__cards { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
-
     .col__empty { display: grid; place-items: center; padding: 48px 16px; opacity: 0.5; }
 
     /* CARD */
-    .card {
-      background: var(--c-bg-card); border: 1px solid var(--c-border);
-      padding: 14px 16px;
-      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-      cursor: grab; position: relative;
-      display: flex; flex-direction: column; gap: 10px;
-    }
+    .card { background: var(--c-bg-card); border: 1px solid var(--c-border); padding: 14px 16px; transition: all 0.25s cubic-bezier(0.4,0,0.2,1); cursor: grab; position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
     .card:active { cursor: grabbing; }
-    .card:hover { border-color: var(--c-ink); box-shadow: 0 4px 12px rgba(20,32,46,0.06); }
+    .card:hover { border-color: var(--c-ink); box-shadow: 0 4px 12px rgba(20,32,46,0.06); transform: translateY(-1px); }
     .card--new { animation: cardEnter 0.5s cubic-bezier(0.32,0.72,0,1), cardGlow 2.5s ease-out; }
     .card--urgent { border-left: 3px solid var(--c-danger); padding-left: 13px; }
     @keyframes cardEnter { from { opacity: 0; transform: translateY(-12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -260,7 +330,7 @@ const API = resolveApi();
 
     .card__head { display: flex; justify-content: space-between; align-items: center; }
     .card__id { color: var(--c-text-soft); font-weight: 500; }
-    .card__time { font-size: 11px; color: var(--c-text-muted); padding: 2px 8px; background: var(--c-paper); font-feature-settings: 'tnum'; letter-spacing: 0.04em; }
+    .card__time { font-size: 11px; color: var(--c-text-muted); padding: 2px 8px; background: var(--c-paper); font-feature-settings: 'tnum'; letter-spacing: 0.04em; transition: all 0.3s; }
     .card__time.late { background: rgba(145,53,40,0.10); color: var(--c-danger); font-weight: 600; }
 
     .card__room { display: flex; flex-direction: column; gap: 0; padding: 4px 0; border-bottom: 1px solid var(--c-border); }
@@ -271,18 +341,74 @@ const API = resolveApi();
     .card__items { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
     .card__items li { display: grid; grid-template-columns: 24px 1fr; gap: 8px; font-size: 13px; line-height: 1.35; }
     .card__item-qty { color: var(--c-accent-deep); font-weight: 700; font-feature-settings: 'tnum'; text-align: right; }
-    .card__item-name { color: var(--c-ink); }
+    .card__item-name { color: var(--c-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card__more { font-size: 11px; color: var(--c-text-soft); font-style: italic; padding-left: 32px; }
 
     .card__foot { display: flex; justify-content: space-between; align-items: baseline; padding-top: 8px; border-top: 1px solid var(--c-border); }
     .card__total { font-size: 18px; color: var(--c-ink); letter-spacing: -0.01em; font-feature-settings: 'tnum'; }
     .card__source { color: var(--c-text-soft); font-size: 9px; }
 
     .card__actions { display: flex; gap: 4px; padding-top: 4px; }
-    .action { padding: 8px 12px; border: 1px solid var(--c-border-strong); background: var(--c-bg-card); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+    .action { padding: 8px 12px; border: 1px solid var(--c-border-strong); background: var(--c-bg-card); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; color: var(--c-ink); }
     .action--primary { flex: 1; background: var(--c-ink); color: white; border-color: var(--c-ink); }
     .action--primary:hover { background: var(--c-accent); border-color: var(--c-accent); }
     .action--ghost { width: 32px; padding: 8px 0; }
     .action--ghost:hover { background: var(--c-danger); color: white; border-color: var(--c-danger); }
+    .action--big { width: 100%; padding: 16px; font-size: 12px; letter-spacing: 0.16em; }
+
+    /* DETAIL PANEL */
+    .detail-overlay { position: fixed; inset: 0; background: rgba(20,32,46,0.4); backdrop-filter: blur(4px); z-index: 50; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .detail {
+      position: fixed; right: 0; top: 0; bottom: 0;
+      width: 480px; max-width: 90vw;
+      background: var(--c-bg-card); border-left: 1px solid var(--c-border);
+      display: flex; flex-direction: column;
+      z-index: 51;
+      transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
+      box-shadow: -32px 0 64px rgba(20,32,46,0.18);
+    }
+    .detail.open { transform: translateX(0); }
+
+    .detail__head { padding: 24px; border-bottom: 1px solid var(--c-border); display: flex; justify-content: space-between; align-items: flex-start; }
+    .detail__head h2 { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 500; margin: 4px 0 0; color: var(--c-ink); letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+    .detail__close { width: 36px; height: 36px; background: var(--c-paper); border: none; font-size: 24px; color: var(--c-text-muted); cursor: pointer; display: grid; place-items: center; line-height: 1; }
+    .detail__close:hover { background: var(--c-ink); color: white; }
+
+    .detail__body { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 8px; }
+    .detail__row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--c-border); }
+    .detail__row:last-child { border-bottom: none; }
+    .detail__row > span:last-child { font-size: 14px; color: var(--c-ink); }
+    .detail__room { font-size: 22px; font-weight: 500; }
+
+    .detail__items { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+    .detail__items li { display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; padding: 8px 0; }
+    .detail__item-qty { color: var(--c-accent-deep); font-weight: 600; font-feature-settings: 'tnum'; }
+    .detail__item-body { display: flex; flex-direction: column; gap: 4px; }
+    .detail__item-body > span:first-child { font-size: 14px; color: var(--c-ink); font-weight: 500; }
+    .detail__item-options { font-size: 11px; color: var(--c-text-muted); letter-spacing: 0.04em; }
+    .detail__item-notes { font-size: 12px; color: var(--c-text-muted); font-style: italic; }
+    .detail__item-price { font-size: 15px; color: var(--c-ink); font-feature-settings: 'tnum'; }
+
+    .detail__total { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 0; }
+    .detail__total-amount { font-size: 32px; color: var(--c-ink); letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+
+    .timeline { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; position: relative; }
+    .timeline::before { content: ''; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 1px; background: var(--c-border-strong); }
+    .timeline li { display: grid; grid-template-columns: 16px 1fr; gap: 12px; align-items: center; }
+    .timeline__dot { width: 11px; height: 11px; background: var(--c-accent); border: 2px solid var(--c-bg-card); border-radius: 50%; z-index: 1; box-shadow: 0 0 0 1px var(--c-border-strong); }
+    .timeline li > div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 0; }
+    .timeline__status { font-size: 13px; color: var(--c-ink); font-weight: 500; }
+    .timeline__time { color: var(--c-text-muted); }
+
+    .detail__foot { padding: 16px 24px; border-top: 1px solid var(--c-border); }
+
+    .tag { display: inline-block; padding: 2px 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid currentColor; }
+    .tag--pending { color: var(--c-warning); }
+    .tag--accepted { color: #1e40af; }
+    .tag--preparing { color: #4338ca; }
+    .tag--delivered { color: var(--c-success); }
+    .tag--cancelled { color: var(--c-danger); }
 
     /* LOGIN */
     .login-page { min-height: 100vh; display: grid; grid-template-columns: 480px 1fr; }
@@ -303,8 +429,8 @@ const API = resolveApi();
     .login-bg { background-image: url('https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1600&q=85'); background-size: cover; background-position: center; position: relative; }
     .login-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(20,32,46,0.4) 0%, rgba(20,32,46,0.85) 100%); }
 
-    @media (max-width: 1300px) { .kanban { grid-template-columns: repeat(2, 1fr); } .kpis { display: none; } }
-    @media (max-width: 800px) { .login-page { grid-template-columns: 1fr; } .login-bg { display: none; } }
+    @media (max-width: 1300px) { .kanban { grid-template-columns: repeat(2, 1fr); } .kpis { display: none; } .search { display: none; } }
+    @media (max-width: 800px) { .login-page { grid-template-columns: 1fr; } .login-bg { display: none; } .detail { width: 100%; } }
   `],
 })
 export class AppComponent implements OnInit, OnDestroy {
@@ -319,10 +445,15 @@ export class AppComponent implements OnInit, OnDestroy {
   newOrderIds = signal<Set<string>>(new Set());
   soundEnabled = signal(true);
   liveTime = signal('');
+  tickSig = signal(Date.now()); // updated every second to refresh "X min ago"
+  searchQuery = '';
+  searchSig = signal('');
+  detailOrder = signal<Order | null>(null);
 
   private socket: Socket | null = null;
   private token = '';
-  private timerInterval: any;
+  private clockInterval: any;
+  private tickInterval: any;
   private draggedOrder: Order | null = null;
 
   columns: { label: string; status: OrderStatus; next?: OrderStatus; actionLabel?: string; empty: string }[] = [
@@ -354,10 +485,15 @@ export class AppComponent implements OnInit, OnDestroy {
       localStorage.removeItem('reception_auth');
     }
     this.tickClock();
-    this.timerInterval = setInterval(() => this.tickClock(), 30000);
+    this.clockInterval = setInterval(() => this.tickClock(), 30000);
+    this.tickInterval = setInterval(() => this.tickSig.set(Date.now()), 1000);
   }
 
-  ngOnDestroy() { this.socket?.disconnect(); clearInterval(this.timerInterval); }
+  ngOnDestroy() {
+    this.socket?.disconnect();
+    clearInterval(this.clockInterval);
+    clearInterval(this.tickInterval);
+  }
 
   tickClock() {
     this.liveTime.set(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
@@ -370,15 +506,47 @@ export class AppComponent implements OnInit, OnDestroy {
   userInitial = computed(() => (this.user()?.firstName?.charAt(0) || 'U').toUpperCase());
 
   filteredOrders(status: OrderStatus): Order[] {
-    return this.orders().filter((o) => o.status === status).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    const q = this.searchSig().trim().toLowerCase();
+    return this.orders()
+      .filter((o) => o.status === status)
+      .filter((o) => {
+        if (!q) return true;
+        return (
+          o.id.toLowerCase().includes(q) ||
+          o.room.toLowerCase().includes(q) ||
+          (o.guestName ?? '').toLowerCase().includes(q) ||
+          o.items.some((it) => it.name.toLowerCase().includes(q))
+        );
+      })
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }
 
   trackOrder = (_: number, o: Order) => o.id;
 
-  isUrgent(o: Order): boolean { return this.minutesAgo(o.createdAt) > 15 && o.status !== 'delivered' && o.status !== 'cancelled'; }
-  minutesAgo(iso: string): number { return Math.floor((Date.now() - new Date(iso).getTime()) / 60000); }
+  isUrgent(o: Order): boolean {
+    return this.minutesAgo(o.createdAt) > 15 && o.status !== 'delivered' && o.status !== 'cancelled';
+  }
+  minutesAgo(iso: string): number {
+    this.tickSig(); // subscribe so it re-evaluates each tick
+    return Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  }
   sourceLabel(s: string): string {
-    return ({ kiosk: 'Borne', tablet: 'Tablette', reception: 'Réception' } as Record<string,string>)[s] || s;
+    return ({ kiosk: 'Borne', tablet: 'Tablette', reception: 'Réception' } as Record<string, string>)[s] || s;
+  }
+  statusLabel(s: string): string {
+    return ({ pending: 'Reçue', accepted: 'Acceptée', preparing: 'En préparation', delivered: 'Livrée', cancelled: 'Annulée' } as Record<string, string>)[s] || s;
+  }
+  formatDateTime(iso: string): string {
+    return new Date(iso).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
+  }
+
+  nextStatus(s: OrderStatus): OrderStatus | null {
+    const order: Record<OrderStatus, OrderStatus | null> = { pending: 'accepted', accepted: 'preparing', preparing: 'delivered', delivered: null, cancelled: null };
+    return order[s];
+  }
+
+  openDetail(order: Order) {
+    this.detailOrder.set(order);
   }
 
   // Drag and drop
@@ -439,7 +607,11 @@ export class AppComponent implements OnInit, OnDestroy {
       this.markNew(o.id);
       if (this.soundEnabled()) this.playSound();
     });
-    this.socket.on('order:updated', (o: Order) => this.orders.update((list) => list.map((x) => (x.id === o.id ? o : x))));
+    this.socket.on('order:updated', (o: Order) => {
+      this.orders.update((list) => list.map((x) => (x.id === o.id ? o : x)));
+      // Update detail panel if showing this order
+      if (this.detailOrder()?.id === o.id) this.detailOrder.set(o);
+    });
   }
 
   private markNew(id: string) {
