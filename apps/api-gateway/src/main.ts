@@ -8,7 +8,39 @@ import { setupProxies } from './proxy';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true, rawBody: true });
-  app.use(helmet({ contentSecurityPolicy: false }));
+
+  // Security: Helmet + HSTS (1 year, with subdomains and preload)
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
+
+  // Structured request logging — JSON one line per request (Render-friendly)
+  const logger = new Logger('http');
+  app.use((req: any, res: any, next: any) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const dur = Date.now() - start;
+      const correlationId = req.headers['x-correlation-id'] || Math.random().toString(36).slice(2, 10);
+      logger.log(JSON.stringify({
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        durationMs: dur,
+        ua: req.headers['user-agent']?.slice(0, 80),
+        ip: req.ip,
+        correlationId,
+        tenantId: req.headers['x-tenant-id'] ?? null,
+      }));
+    });
+    next();
+  });
+
+  // Healthz at gateway level
+  app.use('/healthz', (_req: any, res: any) => res.json({ status: 'ok', service: 'api-gateway', uptimeSeconds: Math.floor(process.uptime()) }));
+
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   setupProxies(app.getHttpAdapter().getInstance());

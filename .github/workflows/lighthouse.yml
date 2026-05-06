@@ -1,0 +1,33 @@
+name: Lighthouse
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/portal/**'
+      - 'apps/lobby-kiosk/**'
+      - '.github/workflows/lighthouse.yml'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm --filter lobby-kiosk build
+      - name: Lighthouse audit (lobby)
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            https://concierge-portal.vercel.app
+            https://concierge-lobby.vercel.app
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          configPath: ./.github/lighthouserc.json
+        continue-on-error: true

@@ -102,3 +102,36 @@ ion-app, ion-content, ion-page {
   --background: var(--c-bg);
   --color: var(--c-text);
 }
+
+/* Night mode (auto 22h-7h) */
+html.night {
+  --c-bg: #0e1722;
+  --c-bg-soft: #1a2536;
+  --c-bg-card: #1c2a3b;
+  --c-text: #ede5d6;
+  --c-text-muted: #97a0ad;
+  --c-text-soft: #6c7787;
+  --c-border: rgba(245,240,232,0.08);
+  --c-border-strong: rgba(245,240,232,0.18);
+}
+html.night body {
+  background: var(--c-bg);
+}
+html.night ion-app, html.night ion-content, html.night ion-page {
+  --background: var(--c-bg);
+  --color: var(--c-text);
+}
+html.night img { filter: brightness(0.92); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* RTL adjustments */
+html[dir="rtl"] body { font-family: var(--c-font-body); }
+html[dir="rtl"] .chat, html[dir="rtl"] .chat-fab { left: 28px; right: auto; }

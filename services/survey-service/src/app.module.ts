@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { SurveysModule } from './surveys/surveys.module';
 import { ResponsesModule } from './responses/responses.module';
+import { HealthController } from '@concierge/nest-common';
 
 @Module({
   imports: [
@@ -13,5 +14,6 @@ import { ResponsesModule } from './responses/responses.module';
     SurveysModule,
     ResponsesModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

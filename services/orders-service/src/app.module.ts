@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { OrdersModule } from './orders/orders.module';
 import { MenuModule } from './menu/menu.module';
+import { HealthController } from '@concierge/nest-common';
 
 @Module({
   imports: [
@@ -13,5 +14,6 @@ import { MenuModule } from './menu/menu.module';
     MenuModule,
     OrdersModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
