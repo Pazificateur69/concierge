@@ -10,6 +10,13 @@ import { Roles, RolesGuard } from '@concierge/nest-common';
 export class TenantController {
   constructor(private readonly tenantService: TenantService) {}
 
+  @Get('directory')
+  @ApiOperation({ summary: 'Public directory of all tenants (slug + name only) — used by tenant switcher' })
+  async directory() {
+    const tenants = await this.tenantService.list();
+    return tenants.map((t) => ({ id: t.id, slug: t.slug, name: t.name, theme: t.theme, locales: t.locales }));
+  }
+
   @Get(':slug')
   @ApiOperation({ summary: 'Get public info of a tenant by slug (no auth needed)' })
   bySlug(@Param('slug') slug: string) {

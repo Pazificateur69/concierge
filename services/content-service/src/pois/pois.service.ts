@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { PoiEntity, PoiDocument } from './poi.schema';
@@ -18,6 +18,22 @@ export class PoisService {
   async create(tenantId: string, payload: Partial<PoiEntity>): Promise<Poi> {
     const created = await this.model.create({ ...payload, tenantId });
     return this.toDto(created);
+  }
+
+  async update(tenantId: string, id: string, payload: Partial<PoiEntity>): Promise<Poi> {
+    const updated = await this.model.findOneAndUpdate(
+      { _id: id, tenantId },
+      { $set: { ...payload } },
+      { new: true },
+    );
+    if (!updated) throw new NotFoundException(`POI ${id} not found`);
+    return this.toDto(updated);
+  }
+
+  async delete(tenantId: string, id: string): Promise<{ ok: true }> {
+    const res = await this.model.deleteOne({ _id: id, tenantId });
+    if (res.deletedCount === 0) throw new NotFoundException(`POI ${id} not found`);
+    return { ok: true };
   }
 
   private toDto(p: PoiDocument): Poi {

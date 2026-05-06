@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, signal, computed } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -47,7 +47,8 @@ const API = resolveApi();
         </div>
 
         <div class="topbar__right">
-          <input type="search" [(ngModel)]="searchQuery" placeholder="Rechercher…" class="search" (input)="searchSig.set(searchQuery)" />
+          <input #searchInput type="search" [(ngModel)]="searchQuery" placeholder="Rechercher… (/)" class="search" (input)="searchSig.set(searchQuery)" />
+          <button class="topbar-btn topbar-btn--text" (click)="showShortcuts.set(!showShortcuts())" [class.active]="showShortcuts()" title="Raccourcis clavier">⌘</button>
           <button class="topbar-btn" (click)="soundEnabled.set(!soundEnabled())" [class.active]="soundEnabled()" aria-label="Son">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 5L6 9H2v6h4l5 4V5z"/>
@@ -66,6 +67,27 @@ const API = resolveApi();
           </button>
         </div>
       </header>
+
+      <!-- Shortcuts cheatsheet -->
+      <div class="shortcuts" *ngIf="showShortcuts()" (click)="showShortcuts.set(false)">
+        <div class="shortcuts__panel" (click)="$event.stopPropagation()">
+          <header class="shortcuts__head">
+            <span class="eyebrow">Raccourcis clavier</span>
+            <button class="drawer__close" (click)="showShortcuts.set(false)">×</button>
+          </header>
+          <ul class="shortcuts__list">
+            <li><kbd>/</kbd><span>Focaliser la recherche</span></li>
+            <li><kbd>Esc</kbd><span>Fermer le panneau / vider la recherche</span></li>
+            <li><kbd>1</kbd><span>Accepter la commande sélectionnée</span></li>
+            <li><kbd>2</kbd><span>Mettre en préparation</span></li>
+            <li><kbd>3</kbd><span>Marquer livrée</span></li>
+            <li><kbd>4</kbd><span>Annuler (avec confirmation)</span></li>
+            <li><kbd>P</kbd><span>Imprimer le ticket cuisine</span></li>
+            <li><kbd>↑</kbd> <kbd>↓</kbd><span>Sélectionner la commande suivante / précédente</span></li>
+            <li><kbd>?</kbd><span>Afficher / masquer ces raccourcis</span></li>
+          </ul>
+        </div>
+      </div>
 
       <main class="kanban">
         <section
@@ -198,8 +220,12 @@ const API = resolveApi();
           </ol>
         </div>
 
-        <footer class="detail__foot" *ngIf="nextStatus(o.status) as next">
-          <button class="action action--primary action--big" (click)="updateStatus(o, next); detailOrder.set(null)">
+        <footer class="detail__foot">
+          <div class="detail__foot-row">
+            <button class="action action--ghost action--big-ghost" (click)="printKitchenTicket(o)">Imprimer ticket cuisine</button>
+            <button class="action action--ghost action--big-ghost action--danger" *ngIf="o.status !== 'delivered' && o.status !== 'cancelled'" (click)="confirmCancel(o)">Annuler</button>
+          </div>
+          <button class="action action--primary action--big" *ngIf="nextStatus(o.status) as next" (click)="updateStatus(o, next); detailOrder.set(null)">
             Faire passer en {{ statusLabel(next) }} →
           </button>
         </footer>
@@ -401,7 +427,23 @@ const API = resolveApi();
     .timeline__status { font-size: 13px; color: var(--c-ink); font-weight: 500; }
     .timeline__time { color: var(--c-text-muted); }
 
-    .detail__foot { padding: 16px 24px; border-top: 1px solid var(--c-border); }
+    .detail__foot { padding: 16px 24px; border-top: 1px solid var(--c-border); display: flex; flex-direction: column; gap: 10px; }
+    .detail__foot-row { display: flex; gap: 8px; }
+    .action--big-ghost { flex: 1; padding: 12px; font-size: 11px; letter-spacing: 0.12em; }
+    .action--danger { color: var(--c-danger); border-color: var(--c-danger); }
+    .action--danger:hover { background: var(--c-danger); color: white; }
+
+    /* SHORTCUTS PANEL */
+    .topbar-btn--text { font-size: 16px; font-weight: 600; color: var(--c-text-muted); }
+    .shortcuts { position: fixed; inset: 0; background: rgba(20,32,46,0.4); backdrop-filter: blur(4px); z-index: 80; display: grid; place-items: center; animation: fadeIn 0.25s ease; }
+    .shortcuts__panel { width: 480px; max-width: 92vw; background: var(--c-bg-card); border: 1px solid var(--c-border); }
+    .shortcuts__head { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--c-border); }
+    .shortcuts__head .eyebrow { font-size: 11px; }
+    .drawer__close { width: 32px; height: 32px; background: var(--c-paper); border: none; font-size: 22px; color: var(--c-text-muted); cursor: pointer; line-height: 1; }
+    .drawer__close:hover { background: var(--c-ink); color: white; }
+    .shortcuts__list { list-style: none; padding: 18px 22px 22px; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+    .shortcuts__list li { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--c-ink); }
+    .shortcuts__list kbd { display: inline-block; min-width: 28px; padding: 4px 10px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; background: var(--c-paper); border: 1px solid var(--c-border-strong); color: var(--c-ink); }
 
     .tag { display: inline-block; padding: 2px 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid currentColor; }
     .tag--pending { color: var(--c-warning); }
@@ -449,6 +491,8 @@ export class AppComponent implements OnInit, OnDestroy {
   searchQuery = '';
   searchSig = signal('');
   detailOrder = signal<Order | null>(null);
+  showShortcuts = signal(false);
+  selectedIndex = signal(-1);
 
   private socket: Socket | null = null;
   private token = '';
@@ -621,6 +665,110 @@ export class AppComponent implements OnInit, OnDestroy {
 
   updateStatus(order: Order, status: OrderStatus) {
     this.http.patch<Order>(`${API}/orders/${order.id}/status`, { status }, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe();
+  }
+
+  confirmCancel(order: Order) {
+    if (!window.confirm(`Annuler la commande #${order.id.slice(-6).toUpperCase()} ?\nCette action est définitive.`)) return;
+    this.updateStatus(order, 'cancelled');
+    this.detailOrder.set(null);
+  }
+
+  printKitchenTicket(order: Order) {
+    const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Ticket #${order.id.slice(-6).toUpperCase()}</title>
+<style>
+@page { size: 80mm auto; margin: 0; }
+body { font-family: 'Courier New', monospace; font-size: 12px; padding: 8mm; color: #000; max-width: 64mm; margin: 0 auto; }
+.head { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 8px; margin-bottom: 8px; }
+.head h1 { font-size: 22px; margin: 4px 0; letter-spacing: 0.04em; }
+.head .id { font-size: 14px; font-weight: bold; }
+.row { display: flex; justify-content: space-between; padding: 2px 0; }
+.row b { font-weight: bold; }
+.items { margin: 8px 0; padding: 8px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
+.item { padding: 6px 0; border-bottom: 1px dotted #ccc; }
+.item:last-child { border-bottom: none; }
+.qty { display: inline-block; min-width: 28px; font-weight: bold; font-size: 14px; }
+.opts { font-style: italic; font-size: 11px; padding-left: 28px; }
+.notes { font-weight: bold; padding-left: 28px; padding-top: 2px; }
+.total { font-size: 16px; font-weight: bold; text-align: right; margin-top: 8px; padding-top: 8px; border-top: 2px solid #000; }
+.foot { text-align: center; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #000; font-size: 10px; }
+@media print { body { padding: 4mm; } }
+</style></head><body>
+<div class="head">
+  <h1>CUISINE</h1>
+  <div class="id">#${order.id.slice(-6).toUpperCase()}</div>
+  <div>${fmtTime(order.createdAt)}</div>
+</div>
+<div class="row"><span>Chambre :</span><b style="font-size:18px">${order.room}</b></div>
+${order.guestName ? `<div class="row"><span>Client :</span><span>${order.guestName}</span></div>` : ''}
+<div class="row"><span>Source :</span><span>${this.sourceLabel(order.source)}</span></div>
+<div class="items">
+${order.items.map((it: any) => `<div class="item">
+  <span class="qty">${it.quantity}×</span>
+  <b>${it.name}</b>
+  ${it.options?.length ? `<div class="opts">${it.options.join(' · ')}</div>` : ''}
+  ${it.notes ? `<div class="notes">« ${it.notes} »</div>` : ''}
+</div>`).join('')}
+</div>
+<div class="total">TOTAL : ${order.total.toFixed(2)} €</div>
+<div class="foot">Concierge — ${this.tenantName()}<br>Bon service !</div>
+<script>window.onload = () => { window.print(); setTimeout(() => window.close(), 400); };<\/script>
+</body></html>`;
+    const w = window.open('', '_blank', 'width=420,height=720');
+    if (!w) {
+      window.alert('Veuillez autoriser les pop-ups pour imprimer.');
+      return;
+    }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
+
+  // Keyboard shortcuts
+  @HostListener('window:keydown', ['$event'])
+  onKey(e: KeyboardEvent) {
+    if (!this.loggedIn()) return;
+    const target = e.target as HTMLElement;
+    const isTyping = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+    if (isTyping) {
+      if (e.key === 'Escape') {
+        (target as HTMLInputElement).blur();
+        if (target.tagName === 'INPUT') { this.searchQuery = ''; this.searchSig.set(''); }
+      }
+      return;
+    }
+
+    if (e.key === '/' || e.key === 's') {
+      e.preventDefault();
+      const input = document.querySelector('input.search') as HTMLInputElement | null;
+      input?.focus();
+      return;
+    }
+    if (e.key === '?') { e.preventDefault(); this.showShortcuts.update((v) => !v); return; }
+    if (e.key === 'Escape') {
+      if (this.showShortcuts()) this.showShortcuts.set(false);
+      else if (this.detailOrder()) this.detailOrder.set(null);
+      else if (this.searchQuery) { this.searchQuery = ''; this.searchSig.set(''); }
+      return;
+    }
+
+    const focused = this.detailOrder();
+    if (focused) {
+      if (e.key === '1' && focused.status === 'pending') { e.preventDefault(); this.updateStatus(focused, 'accepted'); return; }
+      if (e.key === '2' && (focused.status === 'pending' || focused.status === 'accepted')) { e.preventDefault(); this.updateStatus(focused, 'preparing'); return; }
+      if (e.key === '3' && focused.status === 'preparing') { e.preventDefault(); this.updateStatus(focused, 'delivered'); this.detailOrder.set(null); return; }
+      if (e.key === '4' && focused.status !== 'delivered' && focused.status !== 'cancelled') { e.preventDefault(); this.confirmCancel(focused); return; }
+      if ((e.key === 'p' || e.key === 'P')) { e.preventDefault(); this.printKitchenTicket(focused); return; }
+    }
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const all = this.orders().filter((o) => o.status !== 'cancelled' && o.status !== 'delivered').sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+      if (!all.length) return;
+      const cur = this.selectedIndex();
+      const next = e.key === 'ArrowDown' ? Math.min(cur + 1, all.length - 1) : Math.max(cur - 1, 0);
+      this.selectedIndex.set(next === -1 ? 0 : next);
+      this.detailOrder.set(all[Math.max(0, next)]);
+    }
   }
 
   private playSound() {

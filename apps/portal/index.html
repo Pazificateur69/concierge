@@ -476,6 +476,24 @@
     .colophon__bottom { flex-direction: column; gap: 8px; text-align: center; }
     .acc { grid-template-columns: 1fr; gap: 4px; padding: 16px; }
   }
+  @media (max-width: 540px) {
+    .topbar { padding: 14px 18px; gap: 12px; flex-wrap: wrap; }
+    .top-meta { gap: 8px; }
+    .top-status { display: none; }
+    .hero__content, .hero__bottom { padding-left: 18px; padding-right: 18px; }
+    .hero__title { font-size: 44px; line-height: 1.05; letter-spacing: -0.02em; }
+    .hero__lead { font-size: 15px; }
+    .hero__bottom { padding-bottom: 32px; }
+    .facts__inner { grid-template-columns: 1fr; padding: 32px 18px; gap: 0; }
+    .fact { border-right: none; border-bottom: 1px solid var(--c-border); padding-bottom: 18px; padding-top: 18px; }
+    .fact:last-child { border-bottom: none; }
+    .section__head, .demo__inner, .colophon__row, .resources__grid, .apps__grid { padding-left: 18px !important; padding-right: 18px !important; }
+    .section__head h2 { font-size: 32px; }
+    .app-card { padding: 24px; }
+    .app-card__title { font-size: 22px; }
+    .colophon__bottom { padding: 18px; }
+    .demo__title, .resource__title { font-size: 20px; }
+  }
 </style>
 </head>
 <body>

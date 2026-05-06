@@ -9,6 +9,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/spa', component: () => import('./views/SpaView.vue') },
   { path: '/activities', component: () => import('./views/ActivitiesView.vue') },
   { path: '/help', component: () => import('./views/HelpView.vue') },
+  { path: '/:pathMatch(.*)*', component: () => import('./views/NotFoundView.vue') },
 ];
 
 export const router = createRouter({

@@ -85,6 +85,12 @@ const API = resolveApi();
               <h1 class="topbar__title serif">{{ pageTitle() }}</h1>
             </div>
             <div class="topbar__actions">
+              <div class="tenant-switcher" *ngIf="tenantList().length > 1">
+                <span class="eyebrow">Hôtel</span>
+                <select [(ngModel)]="selectedTenantSlug" (change)="onTenantChange()">
+                  <option *ngFor="let t of tenantList()" [value]="t.slug">{{ t.name }}</option>
+                </select>
+              </div>
               <button class="btn-secondary" (click)="refresh()">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
                 Actualiser
@@ -236,7 +242,7 @@ const API = resolveApi();
           <!-- SURVEYS -->
           <section *ngIf="tab() === 'surveys'" class="content">
             <div class="surveys-grid">
-              <article *ngFor="let s of surveys()" class="survey">
+              <article *ngFor="let s of surveys()" class="survey survey--clickable" (click)="loadSurveyResponses(s)">
                 <header>
                   <span class="eyebrow">{{ s.publishedAt ? 'Publiée' : 'Brouillon' }}</span>
                   <span class="survey__num serif">{{ s.questions.length }}</span>
@@ -246,12 +252,18 @@ const API = resolveApi();
                 <div class="survey__locales">
                   <span *ngFor="let l of s.locales" class="locale-pill">{{ l.toUpperCase() }}</span>
                 </div>
+                <span class="survey__cta">Voir les réponses →</span>
               </article>
+              <div *ngIf="!surveys().length" class="empty">Aucune enquête</div>
             </div>
           </section>
 
           <!-- POIs -->
           <section *ngIf="tab() === 'pois'" class="content">
+            <div class="orders-toolbar">
+              <span class="card__hint">{{ pois().length }} adresses</span>
+              <button class="btn-primary" (click)="openPoiNew()">+ Ajouter une adresse</button>
+            </div>
             <div class="poi-grid">
               <article *ngFor="let p of pois()" class="poi-row">
                 <div class="poi-row__img" [style.backgroundImage]="'url(' + (p.photo || categoryFallback(p.category)) + ')'"></div>
@@ -266,9 +278,12 @@ const API = resolveApi();
                     <span *ngIf="p.hours">{{ p.hours }}</span>
                   </p>
                 </div>
-                <a [href]="'https://www.openstreetmap.org/?mlat=' + p.lat + '&mlon=' + p.lng + '#map=17/' + p.lat + '/' + p.lng" target="_blank" class="btn-secondary">Voir sur la carte →</a>
+                <div class="row-actions">
+                  <button class="row-btn" (click)="openPoiEdit(p)" aria-label="Modifier">✎</button>
+                  <button class="row-btn row-btn--danger" (click)="deletePoi(p)" aria-label="Supprimer">×</button>
+                </div>
               </article>
-              <div *ngIf="!pois().length" class="empty">Chargement…</div>
+              <div *ngIf="!pois().length" class="empty">Aucune adresse — cliquez sur "Ajouter" pour commencer.</div>
             </div>
           </section>
 
@@ -281,9 +296,10 @@ const API = resolveApi();
                 </button>
               </div>
               <span class="card__hint">{{ filteredMenu().length }} articles · {{ menuTotalValue().toFixed(2) }} € de carte</span>
+              <button class="btn-primary" (click)="openMenuNew()">+ Ajouter un article</button>
             </div>
             <div class="menu-grid">
-              <article *ngFor="let m of filteredMenu()" class="menu-row">
+              <article *ngFor="let m of filteredMenu()" class="menu-row" [class.menu-row--unavailable]="!m.available">
                 <div class="menu-row__img" [style.backgroundImage]="'url(' + (m.image || foodFallback(m.category)) + ')'"></div>
                 <div class="menu-row__body">
                   <span class="eyebrow">{{ m.category }}</span>
@@ -292,8 +308,12 @@ const API = resolveApi();
                 </div>
                 <div class="menu-row__price serif">{{ m.price > 0 ? (m.price.toFixed(2) + ' €') : 'Inclus' }}</div>
                 <span class="menu-row__avail" [class.on]="m.available">{{ m.available ? '● Disponible' : '○ Indisponible' }}</span>
+                <div class="row-actions">
+                  <button class="row-btn" (click)="openMenuEdit(m)" aria-label="Modifier">✎</button>
+                  <button class="row-btn row-btn--danger" (click)="deleteMenu(m)" aria-label="Supprimer">×</button>
+                </div>
               </article>
-              <div *ngIf="!filteredMenu().length" class="empty">Aucun plat dans cette catégorie</div>
+              <div *ngIf="!filteredMenu().length" class="empty">Aucun plat dans cette catégorie. Cliquez sur "Ajouter" pour en créer un.</div>
             </div>
           </section>
         </main>
@@ -332,6 +352,196 @@ const API = resolveApi();
           <div class="dr-row"><span class="eyebrow">Total</span><span class="serif" style="font-size: 28px; letter-spacing: -0.02em; font-feature-settings: 'tnum';">{{ o.total.toFixed(2) }} €</span></div>
         </div>
       </aside>
+
+      <!-- POI MODAL -->
+      <div class="modal-overlay" *ngIf="poiModal()" (click)="poiModal.set(null)"></div>
+      <div class="modal" *ngIf="poiModal() as p">
+        <header class="modal__head">
+          <span class="eyebrow">{{ p.id ? 'Modifier' : 'Ajouter' }}</span>
+          <h3 class="serif">{{ p.id ? 'Modifier l\\'adresse' : 'Nouvelle adresse' }}</h3>
+          <button class="drawer__close" (click)="poiModal.set(null)">×</button>
+        </header>
+        <div class="modal__body">
+          <label class="field">
+            <span class="eyebrow">Nom (FR)</span>
+            <input [(ngModel)]="p.name.fr" placeholder="Bouchon Daniel & Denise" />
+          </label>
+          <label class="field">
+            <span class="eyebrow">Description (FR)</span>
+            <textarea [(ngModel)]="p.description.fr" rows="2" placeholder="Cuisine lyonnaise authentique…"></textarea>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span class="eyebrow">Catégorie</span>
+              <select [(ngModel)]="p.category">
+                <option *ngFor="let c of poiCategories" [value]="c">{{ c }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="eyebrow">Note ★</span>
+              <input type="number" step="0.1" min="0" max="5" [(ngModel)]="p.rating" />
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span class="eyebrow">Latitude</span>
+              <input type="number" step="0.0001" [(ngModel)]="p.lat" />
+            </label>
+            <label class="field">
+              <span class="eyebrow">Longitude</span>
+              <input type="number" step="0.0001" [(ngModel)]="p.lng" />
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span class="eyebrow">Horaires</span>
+              <input [(ngModel)]="p.hours" placeholder="12h–14h · 19h–22h" />
+            </label>
+            <label class="field">
+              <span class="eyebrow">Téléphone</span>
+              <input [(ngModel)]="p.phone" placeholder="04 78 60 66 53" />
+            </label>
+          </div>
+          <label class="field">
+            <span class="eyebrow">Photo URL</span>
+            <input [(ngModel)]="p.photo" placeholder="https://images.unsplash.com/…" />
+          </label>
+          <a *ngIf="p.lat && p.lng" class="map-link" [href]="'https://www.openstreetmap.org/?mlat=' + p.lat + '&mlon=' + p.lng + '#map=15/' + p.lat + '/' + p.lng" target="_blank">Voir sur OpenStreetMap →</a>
+        </div>
+        <footer class="modal__foot">
+          <button class="btn-secondary" (click)="poiModal.set(null)">Annuler</button>
+          <button class="btn-primary" (click)="savePoi()">{{ p.id ? 'Enregistrer' : 'Créer' }}</button>
+        </footer>
+      </div>
+
+      <!-- MENU MODAL -->
+      <div class="modal-overlay" *ngIf="menuModal()" (click)="menuModal.set(null)"></div>
+      <div class="modal" *ngIf="menuModal() as m">
+        <header class="modal__head">
+          <span class="eyebrow">{{ m.id ? 'Modifier' : 'Ajouter' }}</span>
+          <h3 class="serif">{{ m.id ? 'Modifier l\\'article' : 'Nouvel article' }}</h3>
+          <button class="drawer__close" (click)="menuModal.set(null)">×</button>
+        </header>
+        <div class="modal__body">
+          <label class="field">
+            <span class="eyebrow">Nom (FR)</span>
+            <input [(ngModel)]="m.name.fr" placeholder="Salade César" />
+          </label>
+          <label class="field">
+            <span class="eyebrow">Description (FR)</span>
+            <textarea [(ngModel)]="m.description.fr" rows="2" placeholder="Cœur de romaine, parmesan…"></textarea>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span class="eyebrow">Catégorie</span>
+              <select [(ngModel)]="m.category">
+                <option *ngFor="let c of menuCategoryOptions" [value]="c">{{ c }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="eyebrow">Prix (€)</span>
+              <input type="number" step="0.01" min="0" [(ngModel)]="m.price" />
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span class="eyebrow">Préparation (min)</span>
+              <input type="number" min="0" [(ngModel)]="m.preparationMinutes" />
+            </label>
+            <label class="field field--check">
+              <span class="eyebrow">Disponible</span>
+              <input type="checkbox" [(ngModel)]="m.available" />
+            </label>
+          </div>
+          <label class="field">
+            <span class="eyebrow">Photo URL</span>
+            <input [(ngModel)]="m.image" placeholder="https://images.unsplash.com/…" />
+          </label>
+          <div class="modal-preview" *ngIf="m.image" [style.backgroundImage]="'url(' + m.image + ')'"></div>
+        </div>
+        <footer class="modal__foot">
+          <button class="btn-secondary" (click)="menuModal.set(null)">Annuler</button>
+          <button class="btn-primary" (click)="saveMenu()">{{ m.id ? 'Enregistrer' : 'Créer' }}</button>
+        </footer>
+      </div>
+
+      <!-- SURVEY RESPONSES DRAWER -->
+      <div class="drawer-overlay" *ngIf="!!selectedSurvey()" (click)="closeSurveyResponses()"></div>
+      <aside class="drawer drawer--wide" [class.open]="!!selectedSurvey()" *ngIf="selectedSurvey() as s">
+        <header class="drawer__head">
+          <div>
+            <span class="eyebrow">Enquête · réponses</span>
+            <h2 class="serif">{{ getTitle(s) }}</h2>
+          </div>
+          <button class="drawer__close" (click)="closeSurveyResponses()">×</button>
+        </header>
+        <div class="drawer__body">
+          <div class="resp-summary"><span class="eyebrow">Total</span><span class="serif" style="font-size: 32px; letter-spacing: -0.02em; font-feature-settings: 'tnum';">{{ surveyResponses().length }}</span></div>
+
+          <hr class="rule" style="margin: 16px 0;" />
+
+          <ng-container *ngFor="let q of s.questions">
+            <span class="eyebrow">Question · {{ q.type }}</span>
+            <h4 class="serif resp-q">{{ q.label.fr || (q.label | json) }}</h4>
+
+            <ng-container *ngIf="q.type === 'smiley'">
+              <div class="bars" style="margin-bottom: 24px;">
+                <div *ngFor="let b of smileyDistribution(q.id)" class="bar-row">
+                  <span class="bar-row__label serif">{{ smileyLabel(b.value) }}</span>
+                  <div class="bar-track"><div class="bar-fill" [style.width.%]="b.percentage"></div></div>
+                  <span class="bar-row__pct">{{ b.percentage }}%</span>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="q.type === 'nps'">
+              <ng-container *ngIf="npsDistribution(q.id) as nps">
+                <div class="nps-summary">
+                  <div class="nps-score">
+                    <span class="eyebrow">Score NPS</span>
+                    <span class="serif nps-score__num" [class.good]="nps.nps > 30" [class.bad]="nps.nps < 0">{{ nps.nps }}</span>
+                  </div>
+                  <div class="nps-bands">
+                    <span class="nps-band nps-band--bad" [style.flex]="nps.detractors">{{ nps.detractors }} dét.</span>
+                    <span class="nps-band nps-band--mid" [style.flex]="nps.passives">{{ nps.passives }} neut.</span>
+                    <span class="nps-band nps-band--good" [style.flex]="nps.promoters">{{ nps.promoters }} prom.</span>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
+
+            <ng-container *ngIf="q.type === 'text'">
+              <div class="text-responses" *ngIf="textResponses(q.id) as texts">
+                <blockquote *ngFor="let t of texts" class="text-resp">
+                  <p>« {{ t }} »</p>
+                </blockquote>
+                <div *ngIf="!texts.length" class="empty">Aucun commentaire</div>
+              </div>
+            </ng-container>
+
+            <hr class="rule" style="margin: 24px 0;" />
+          </ng-container>
+
+          <span class="eyebrow">Dernières soumissions</span>
+          <ul class="resp-list">
+            <li *ngFor="let r of surveyResponsesForFilter().slice(0, 20)">
+              <span class="mono">{{ r.completedAt | date:'short':'fr' }}</span>
+              <span>Ch. {{ r.metadata?.room || '—' }}</span>
+              <span class="resp-list__answers">
+                <span *ngFor="let a of r.answers" class="resp-list__answer">{{ a.value }}</span>
+              </span>
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- TOASTS -->
+      <div class="toasts">
+        <div *ngFor="let t of toasts()" class="toast" [class]="'toast--' + t.type" (click)="dismissToast(t.id)">
+          <span class="toast__bullet"></span>
+          {{ t.text }}
+        </div>
+      </div>
     </ng-container>
 
     <ng-template #loginTpl>
@@ -483,6 +693,91 @@ const API = resolveApi();
     .menu-row__avail.on { color: var(--c-success); }
 
     .menu-toolbar { display: flex; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; }
+
+    /* TENANT SWITCHER */
+    .tenant-switcher { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+    .tenant-switcher select { padding: 6px 10px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); font-size: 13px; font-family: inherit; color: var(--c-ink); }
+    .tenant-switcher select:focus { outline: none; border-color: var(--c-ink); }
+
+    /* ROW ACTIONS */
+    .row-actions { display: flex; gap: 4px; }
+    .row-btn { width: 32px; height: 32px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); color: var(--c-text-muted); cursor: pointer; font-size: 14px; transition: all 0.15s; display: grid; place-items: center; font-family: inherit; }
+    .row-btn:hover { background: var(--c-paper); color: var(--c-ink); border-color: var(--c-ink); }
+    .row-btn--danger:hover { background: var(--c-danger); color: white; border-color: var(--c-danger); }
+
+    /* MENU UNAVAILABLE */
+    .menu-row--unavailable { opacity: 0.55; }
+
+    /* PRIMARY BUTTON */
+    .btn-primary { padding: 10px 16px; background: var(--c-ink); color: white; border: none; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: background 0.15s; }
+    .btn-primary:hover { background: var(--c-accent); }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(20,32,46,0.4); backdrop-filter: blur(4px); z-index: 60; animation: fadeIn 0.2s; }
+    .modal {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 560px; max-width: 90vw; max-height: 88vh;
+      background: var(--c-bg-card); border: 1px solid var(--c-border);
+      z-index: 61; display: flex; flex-direction: column;
+      box-shadow: 0 32px 80px rgba(20,32,46,0.25);
+      animation: modalIn 0.3s cubic-bezier(0.32,0.72,0,1);
+    }
+    @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -45%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+    .modal__head { padding: 24px; border-bottom: 1px solid var(--c-border); position: relative; }
+    .modal__head h3 { font-size: 28px; margin: 4px 0 0; font-weight: 500; letter-spacing: -0.01em; }
+    .modal__head .drawer__close { position: absolute; top: 20px; right: 20px; }
+    .modal__body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    .modal__foot { padding: 16px 24px; border-top: 1px solid var(--c-border); display: flex; justify-content: flex-end; gap: 12px; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field--check { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+    .field--check input[type="checkbox"] { justify-self: end; width: 20px; height: 20px; cursor: pointer; }
+    .field input, .field textarea, .field select { padding: 10px 12px; font-size: 14px; border: 1px solid var(--c-border-strong); background: var(--c-bg-card); transition: border-color 0.15s; font-family: inherit; color: var(--c-ink); }
+    .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--c-ink); }
+    .field textarea { resize: vertical; min-height: 60px; line-height: 1.45; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .modal-preview { aspect-ratio: 16 / 9; background-size: cover; background-position: center; border: 1px solid var(--c-border); }
+    .map-link { font-size: 11px; color: var(--c-accent-deep); letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; text-decoration: none; padding-top: 4px; }
+
+    /* DRAWER WIDE (survey responses) */
+    .drawer--wide { width: 640px; max-width: 95vw; }
+    .resp-summary { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0; }
+    .resp-q { font-size: 20px; margin: 4px 0 16px; font-weight: 500; line-height: 1.2; color: var(--c-ink); letter-spacing: -0.01em; }
+    .text-responses { display: flex; flex-direction: column; gap: 12px; }
+    .text-resp { background: var(--c-paper); padding: 14px 16px; margin: 0; border-left: 2px solid var(--c-accent); }
+    .text-resp p { margin: 0; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 16px; color: var(--c-ink); line-height: 1.5; }
+
+    .nps-summary { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
+    .nps-score { display: flex; flex-direction: column; gap: 4px; }
+    .nps-score__num { font-size: 48px; line-height: 1; color: var(--c-text-muted); letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+    .nps-score__num.good { color: var(--c-success); }
+    .nps-score__num.bad { color: var(--c-danger); }
+    .nps-bands { flex: 1; display: flex; height: 24px; gap: 1px; }
+    .nps-band { display: grid; place-items: center; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: white; padding: 0 6px; min-width: 60px; }
+    .nps-band--bad { background: var(--c-danger); }
+    .nps-band--mid { background: var(--c-warning); }
+    .nps-band--good { background: var(--c-success); }
+
+    .resp-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; }
+    .resp-list li { display: grid; grid-template-columns: auto 80px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--c-border); font-size: 13px; align-items: center; }
+    .resp-list__answers { display: flex; gap: 6px; }
+    .resp-list__answer { padding: 2px 8px; background: var(--c-paper); font-family: 'Cormorant Garamond', serif; font-size: 14px; }
+
+    .survey--clickable { cursor: pointer; transition: all 0.15s; position: relative; }
+    .survey--clickable:hover { background: var(--c-paper); }
+    .survey__cta { position: absolute; bottom: 16px; right: 20px; font-size: 11px; color: var(--c-accent-deep); font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0; transition: opacity 0.15s; }
+    .survey--clickable:hover .survey__cta { opacity: 1; }
+
+    /* TOASTS */
+    .toasts { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 200; pointer-events: none; }
+    .toast { background: var(--c-ink); color: white; padding: 12px 18px; font-size: 13px; min-width: 280px; max-width: 400px; box-shadow: 0 12px 32px rgba(20,32,46,0.25); display: flex; align-items: center; gap: 10px; pointer-events: auto; cursor: pointer; animation: toastIn 0.4s cubic-bezier(0.32,0.72,0,1); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .toast__bullet { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .toast--success .toast__bullet { background: var(--c-success); }
+    .toast--error .toast__bullet { background: var(--c-danger); }
+    .toast--info .toast__bullet { background: var(--c-accent); }
 
     /* DRAWER */
     .drawer-overlay { position: fixed; inset: 0; background: rgba(20,32,46,0.4); backdrop-filter: blur(4px); z-index: 50; animation: fadeIn 0.3s; }
@@ -667,6 +962,147 @@ export class AppComponent implements OnInit {
   userInitial = computed(() => (this.user()?.firstName?.charAt(0) || 'A').toUpperCase());
   totalRevenue = computed(() => this.orders().filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0));
 
+  // Tenant switcher (read directly from public directory endpoint)
+  tenantList = signal<{ id: string; slug: string; name: string }[]>([]);
+  selectedTenantSlug = '';
+
+  // Toast system
+  toasts = signal<{ id: number; type: 'success' | 'error' | 'info'; text: string }[]>([]);
+  private toastId = 0;
+  toast(type: 'success' | 'error' | 'info', text: string) {
+    const id = ++this.toastId;
+    this.toasts.update((arr) => [...arr, { id, type, text }]);
+    setTimeout(() => this.toasts.update((arr) => arr.filter((t) => t.id !== id)), 4000);
+  }
+  dismissToast(id: number) {
+    this.toasts.update((arr) => arr.filter((t) => t.id !== id));
+  }
+
+  loadTenantDirectory() {
+    this.http.get<any[]>(`${API}/tenants/directory`).subscribe({
+      next: (list) => {
+        this.tenantList.set(list);
+        if (list[0] && !this.selectedTenantSlug) {
+          this.selectedTenantSlug = list.find((t) => t.id === this.user()?.tenantId)?.slug || list[0].slug;
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  onTenantChange() {
+    this.toast('info', `Changement vers ${this.tenantList().find((t) => t.slug === this.selectedTenantSlug)?.name ?? 'autre hôtel'} — déconnexion requise`);
+    // For multi-tenant we'd issue a new token. For demo, just refresh the data filter.
+    // (The auth token still binds to the original tenantId at the API level.)
+  }
+
+  // POI CRUD modal
+  poiModal = signal<any | null>(null);
+  poiCategories = ['restaurant', 'monument', 'museum', 'transport', 'shopping', 'park', 'bar', 'pharmacy'];
+
+  openPoiNew() { this.poiModal.set({ category: 'restaurant', name: { fr: '' }, lat: 45.7578, lng: 4.832, rating: null, hours: '', description: { fr: '' }, photo: '' }); }
+  openPoiEdit(p: any) { this.poiModal.set({ ...p, name: { ...p.name }, description: { ...(p.description || {}) } }); }
+
+  async savePoi() {
+    const p = this.poiModal();
+    if (!p || !p.name.fr || !this.user()?.tenantId) return;
+    const tid = this.user().tenantId;
+    const headers = { Authorization: `Bearer ${this.token}` };
+    const url = p.id ? `${API}/content/pois/${p.id}?tenantId=${tid}` : `${API}/content/pois?tenantId=${tid}`;
+    const method = p.id ? 'patch' : 'post';
+    (this.http as any)[method](url, p, { headers }).subscribe({
+      next: () => { this.toast('success', p.id ? 'Adresse mise à jour' : 'Adresse ajoutée'); this.poiModal.set(null); this.loadPois(); },
+      error: (err: any) => this.toast('error', err?.error?.message || 'Échec de l\'enregistrement'),
+    });
+  }
+
+  async deletePoi(p: any) {
+    if (!confirm(`Supprimer "${this.poiName(p)}" ?`)) return;
+    const tid = this.user()?.tenantId;
+    if (!tid) return;
+    this.http.delete(`${API}/content/pois/${p.id}?tenantId=${tid}`, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
+      next: () => { this.toast('success', 'Adresse supprimée'); this.loadPois(); },
+      error: (err: any) => this.toast('error', err?.error?.message || 'Échec de la suppression'),
+    });
+  }
+
+  // Menu CRUD modal
+  menuModal = signal<any | null>(null);
+  menuCategoryOptions = ['food', 'drink', 'spa', 'taxi', 'wakeup', 'housekeeping', 'other'];
+
+  openMenuNew() { this.menuModal.set({ category: 'food', name: { fr: '' }, description: { fr: '' }, price: 0, available: true, image: '', preparationMinutes: 15 }); }
+  openMenuEdit(m: any) { this.menuModal.set({ ...m, name: { ...m.name }, description: { ...(m.description || {}) } }); }
+
+  async saveMenu() {
+    const m = this.menuModal();
+    if (!m || !m.name.fr || !this.user()?.tenantId) return;
+    const tid = this.user().tenantId;
+    const headers = { Authorization: `Bearer ${this.token}` };
+    const url = m.id ? `${API}/orders/menu/${m.id}?tenantId=${tid}` : `${API}/orders/menu?tenantId=${tid}`;
+    const method = m.id ? 'patch' : 'post';
+    (this.http as any)[method](url, m, { headers }).subscribe({
+      next: () => { this.toast('success', m.id ? 'Article mis à jour' : 'Article ajouté'); this.menuModal.set(null); this.loadMenu(); },
+      error: (err: any) => this.toast('error', err?.error?.message || 'Échec de l\'enregistrement'),
+    });
+  }
+
+  async deleteMenu(m: any) {
+    if (!confirm(`Supprimer "${this.menuName(m)}" ?`)) return;
+    const tid = this.user()?.tenantId;
+    if (!tid) return;
+    this.http.delete(`${API}/orders/menu/${m.id}?tenantId=${tid}`, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
+      next: () => { this.toast('success', 'Article supprimé'); this.loadMenu(); },
+      error: (err: any) => this.toast('error', err?.error?.message || 'Échec de la suppression'),
+    });
+  }
+
+  // Survey responses
+  surveyResponses = signal<any[]>([]);
+  selectedSurvey = signal<any | null>(null);
+  loadSurveyResponses(s: any) {
+    this.selectedSurvey.set(s);
+    this.http.get<any[]>(`${API}/surveys/${s.id}/responses`, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe((d) => this.surveyResponses.set(d || []));
+  }
+  closeSurveyResponses() { this.selectedSurvey.set(null); this.surveyResponses.set([]); }
+
+  surveyResponsesForFilter = computed(() => {
+    const s = this.selectedSurvey();
+    if (!s) return [];
+    return [...this.surveyResponses()].sort((a, b) => (a.completedAt < b.completedAt ? 1 : -1));
+  });
+
+  // Per-question stats
+  questionStats(qId: string) {
+    const responses = this.surveyResponses();
+    const values = responses
+      .map((r) => r.answers.find((a: any) => a.questionId === qId))
+      .filter((a) => a)
+      .map((a: any) => a.value);
+    return values;
+  }
+  smileyDistribution(qId: string): { value: number; count: number; percentage: number }[] {
+    const values = this.questionStats(qId);
+    const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    for (const v of values) {
+      const n = Number(v);
+      if (n in dist) dist[n]++;
+    }
+    const total = values.length || 1;
+    return [4, 3, 2, 1].map((value) => ({ value, count: dist[value], percentage: Math.round((dist[value] / total) * 100) }));
+  }
+  npsDistribution(qId: string): { promoters: number; passives: number; detractors: number; nps: number; total: number } {
+    const values = this.questionStats(qId).map((v) => Number(v));
+    if (!values.length) return { promoters: 0, passives: 0, detractors: 0, nps: 0, total: 0 };
+    const promoters = values.filter((v) => v >= 9).length;
+    const passives = values.filter((v) => v >= 7 && v <= 8).length;
+    const detractors = values.filter((v) => v <= 6).length;
+    const nps = Math.round(((promoters - detractors) / values.length) * 100);
+    return { promoters, passives, detractors, nps, total: values.length };
+  }
+  textResponses(qId: string): string[] {
+    return this.questionStats(qId).filter((v) => typeof v === 'string' && v.trim()).slice(0, 12) as string[];
+  }
+
   filteredOrdersList = computed(() => {
     const q = this.searchSig().trim().toLowerCase();
     const sf = this.statusFilter();
@@ -766,7 +1202,7 @@ export class AppComponent implements OnInit {
   formatDate(iso: string) { return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
   getTitle(s: Survey) { return (s.title as any).fr || Object.values(s.title)[0]; }
 
-  refresh() { this.loadOrders(); this.loadSurveys(); this.loadPois(); this.loadMenu(); }
+  refresh() { this.loadTenantDirectory(); this.loadOrders(); this.loadSurveys(); this.loadPois(); this.loadMenu(); }
 
   loadPois() {
     if (!this.user()?.tenantId) return;
@@ -775,7 +1211,7 @@ export class AppComponent implements OnInit {
 
   loadMenu() {
     if (!this.user()?.tenantId) return;
-    this.http.get<any[]>(`${API}/orders/menu?tenantId=${this.user().tenantId}`).subscribe((d) => this.menu.set(d));
+    this.http.get<any[]>(`${API}/orders/menu?tenantId=${this.user().tenantId}&available=all`).subscribe((d) => this.menu.set(d));
   }
 
   login() {

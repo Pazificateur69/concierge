@@ -4,16 +4,18 @@ import { onMounted, ref, computed } from 'vue';
 import KioskHeader from '../components/KioskHeader.vue';
 import Icon from '../components/Icon.vue';
 import { useTenantStore } from '../stores/tenant';
+import { useCartStore } from '../stores/cart';
 import { api } from '../api';
 import { useI18n } from 'vue-i18n';
+import { storeToRefs } from 'pinia';
 import type { MenuItem, OrderCategory } from '@concierge/types';
 
 const i18n = useI18n();
 const tenantStore = useTenantStore();
+const cartStore = useCartStore();
+const { items: cart, room } = storeToRefs(cartStore);
 const items = ref<MenuItem[]>([]);
 const loading = ref(true);
-const cart = ref<Record<string, number>>({});
-const room = ref('');
 const submitting = ref(false);
 const sent = ref(false);
 const activeCategory = ref<OrderCategory | 'all'>('all');
@@ -68,14 +70,8 @@ function itemName(it: MenuItem) {
   return (it.name as any)[i18n.locale.value] || (it.name as any).fr || Object.values(it.name)[0];
 }
 
-function add(it: MenuItem) { cart.value = { ...cart.value, [it.id]: (cart.value[it.id] ?? 0) + 1 }; }
-function remove(it: MenuItem) {
-  if (!cart.value[it.id]) return;
-  const c = { ...cart.value };
-  c[it.id]--;
-  if (c[it.id] === 0) delete c[it.id];
-  cart.value = c;
-}
+function add(it: MenuItem) { cartStore.add(it.id); }
+function remove(it: MenuItem) { cartStore.remove(it.id); }
 
 onMounted(async () => {
   if (!tenantStore.tenant) return;
@@ -98,12 +94,12 @@ async function submit() {
       items: Object.entries(cart.value).map(([menuItemId, quantity]) => ({ menuItemId, quantity })),
       source: 'kiosk', locale: i18n.locale.value,
     });
-    sent.value = true; cart.value = {};
+    sent.value = true; cartStore.clear();
   } catch (e) { console.error(e); alert('Une erreur est survenue.'); }
   finally { submitting.value = false; }
 }
 
-function reset() { sent.value = false; room.value = ''; }
+function reset() { sent.value = false; }
 </script>
 
 <template>
