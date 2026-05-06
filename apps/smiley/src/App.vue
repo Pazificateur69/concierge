@@ -9,8 +9,18 @@ const queryApi = params.get('api');
 if (queryApi) sessionStorage.setItem('concierge_api', queryApi);
 const API_URL = queryApi || sessionStorage.getItem('concierge_api') || import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const tenantSlug = params.get('tenant') || 'royal-lyon';
-const surveySlug = params.get('survey') || 'satisfaction-checkout';
+const initialSurveySlug = params.get('survey') || 'satisfaction-checkout';
+const currentSurveySlug = ref(initialSurveySlug);
 const room = params.get('room') || '';
+const mode = params.get('mode') || 'kiosque'; // 'kiosque' (default) | 'mural' (large) | 'mobile' (compact, e.g. QR)
+document.documentElement.setAttribute('data-smiley-mode', mode);
+
+// Available survey switches (multi-survey support)
+const availableSurveys = [
+  { slug: 'satisfaction-checkout', label: 'Check-out' },
+  { slug: 'satisfaction-breakfast', label: 'Petit-déjeuner' },
+  { slug: 'satisfaction-spa', label: 'Spa' },
+];
 
 const survey = ref<Survey | null>(null);
 const tenantId = ref('');
@@ -41,7 +51,9 @@ onMounted(async () => {
     const tenantResp = await axios.get(`${API_URL}/tenants/${tenantSlug}`);
     tenantId.value = tenantResp.data.id;
     tenantName.value = tenantResp.data.name;
-    const surveyResp = await axios.get(`${API_URL}/surveys/${surveySlug}?tenantId=${tenantId.value}`);
+    const surveyResp = await axios.get(`${API_URL}/surveys/${currentSurveySlug.value}?tenantId=${tenantId.value}`).catch(() =>
+      axios.get(`${API_URL}/surveys/${initialSurveySlug}?tenantId=${tenantId.value}`)
+    );
     survey.value = surveyResp.data;
     step.value = 'question';
     flushQueue();
@@ -108,10 +120,10 @@ async function submit() {
   if (!survey.value) return;
   const payload = { answers: answers.value, locale: lang.value, metadata: { device: 'kiosk-checkout', room } };
   try {
-    await axios.post(`${API_URL}/surveys/${surveySlug}/responses?tenantId=${tenantId.value}`, payload);
+    await axios.post(`${API_URL}/surveys/${currentSurveySlug.value}/responses?tenantId=${tenantId.value}`, payload);
     step.value = 'thanks';
   } catch (e) {
-    offlineQueue.push({ tenantId: tenantId.value, surveySlug, payload });
+    offlineQueue.push({ tenantId: tenantId.value, surveySlug: currentSurveySlug.value, payload });
     localStorage.setItem('smiley_queue', JSON.stringify(offlineQueue));
     step.value = 'thanks';
   }
@@ -128,6 +140,20 @@ async function flushQueue() {
 
 function reset() { currentQuestion.value = 0; answers.value = []; step.value = 'question'; }
 function reload() { window.location.reload(); }
+
+async function switchSurvey(slug: string) {
+  currentSurveySlug.value = slug;
+  step.value = 'loading';
+  try {
+    const surveyResp = await axios.get(`${API_URL}/surveys/${slug}?tenantId=${tenantId.value}`);
+    survey.value = surveyResp.data;
+    answers.value = [];
+    currentQuestion.value = 0;
+    step.value = 'question';
+  } catch {
+    step.value = 'error';
+  }
+}
 
 // Score config — refined editorial
 const SCORES = [
@@ -320,6 +346,18 @@ function getOptionColor(value: number) {
           </h2>
           <hr class="thanks__rule" />
           <p class="thanks__desc">Bon voyage, et au plaisir de vous accueillir à nouveau.</p>
+
+          <!-- Multi-survey switcher -->
+          <div class="survey-switch">
+            <span class="eyebrow">Évaluez aussi</span>
+            <div class="survey-switch__row">
+              <button v-for="s in availableSurveys" :key="s.slug"
+                class="survey-switch__btn"
+                :class="{ active: currentSurveySlug === s.slug }"
+                @click="switchSurvey(s.slug)">{{ s.label }}</button>
+            </div>
+          </div>
+
           <button class="thanks__cta" @click="reset">Nouvelle évaluation</button>
         </div>
 
@@ -451,9 +489,16 @@ function getOptionColor(value: number) {
 }
 .smiley-card:hover { background: var(--c-paper-soft); transform: translateY(-4px); }
 .smiley-card:hover::after { transform: scaleX(1); }
-.smiley-card:hover .face { color: var(--accent); transform: scale(1.05); }
+.smiley-card:hover .face { color: var(--accent); transform: scale(1.08); }
+.smiley-card:hover .face circle:first-child { animation: face-bob 2.4s ease-in-out infinite; transform-origin: 60px 60px; }
+.smiley-card:hover .face path:nth-child(2),
+.smiley-card:hover .face path:nth-child(3) { animation: blink 3s ease-in-out infinite; transform-origin: center; }
+.smiley-card:hover .face path:last-child { animation: smile-grow 1.4s ease-out forwards; }
 .smiley-card:hover .smiley-card__rule { width: 48px; background: var(--accent); }
 .smiley-card:active { transform: translateY(-1px) scale(0.98); }
+@keyframes face-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes blink { 0%, 92%, 100% { opacity: 1; transform: scaleY(1); } 96% { opacity: 0.4; transform: scaleY(0.1); } }
+@keyframes smile-grow { 0% { stroke-dasharray: 0 80; } 100% { stroke-dasharray: 80 0; } }
 
 .smiley-card__num { color: var(--c-text-soft); font-size: 9px; align-self: flex-start; }
 .face { color: var(--c-ink); transition: all 0.4s cubic-bezier(0.32,0.72,0,1); width: 96px; height: 96px; }
@@ -511,6 +556,24 @@ function getOptionColor(value: number) {
 
 /* FOOTER */
 .foot { padding: 24px 48px; text-align: center; border-top: 1px solid var(--c-border); }
+
+/* MULTI-SURVEY SWITCHER */
+.survey-switch { margin: 24px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.survey-switch__row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.survey-switch__btn { padding: 10px 18px; background: transparent; border: 1px solid var(--c-border-strong); color: var(--c-ink); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.survey-switch__btn:hover { background: var(--c-paper); }
+.survey-switch__btn.active { background: var(--c-ink); color: white; border-color: var(--c-ink); }
+
+/* MODE VARIANTS */
+:global(html[data-smiley-mode="mural"]) .smiley { font-size: 17px; }
+:global(html[data-smiley-mode="mural"]) .face { width: 132px; height: 132px; }
+:global(html[data-smiley-mode="mural"]) .smiley-card { padding: 56px 24px; min-height: 260px; }
+:global(html[data-smiley-mode="mural"]) .q__label { font-size: 56px; }
+:global(html[data-smiley-mode="mobile"]) .smiley-card { padding: 24px 12px; min-height: 140px; }
+:global(html[data-smiley-mode="mobile"]) .face { width: 64px; height: 64px; }
+:global(html[data-smiley-mode="mobile"]) .smileys { grid-template-columns: repeat(2, 1fr); }
+:global(html[data-smiley-mode="mobile"]) .q__label { font-size: 28px; }
+:global(html[data-smiley-mode="mobile"]) .hdr { padding: 16px 20px; }
 
 /* TRANSITIONS */
 .q-enter-active, .q-leave-active { transition: all 0.45s cubic-bezier(0.32,0.72,0,1); }

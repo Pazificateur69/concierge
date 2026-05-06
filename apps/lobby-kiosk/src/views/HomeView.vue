@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonPage, IonContent } from '@ionic/vue';
-import { onMounted } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import KioskHeader from '../components/KioskHeader.vue';
@@ -15,6 +15,16 @@ const router = useRouter();
 const i18n = useI18n();
 const tenantStore = useTenantStore();
 const voice = useVoiceStore();
+
+// Virtual tour mock (Matterport-style)
+const vtourScenes = [
+  { key: 'lobby', label: 'Lobby', img: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=1600&q=85' },
+  { key: 'suite', label: 'Suite Présidentielle', img: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1600&q=85' },
+  { key: 'spa', label: 'Spa Sothys', img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1600&q=85' },
+  { key: 'restaurant', label: 'Restaurant gastronomique', img: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1600&q=85' },
+];
+const vtourIdx = ref(0);
+const vtourImage = computed(() => `url(${vtourScenes[vtourIdx.value].img})`);
 
 const cards = [
   { icon: 'map', key: 'map', target: '/map', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=900&q=80', meta: 'Lyon, 2e' },
@@ -104,6 +114,35 @@ onMounted(() => {
                 </span>
               </div>
             </article>
+          </div>
+        </section>
+
+        <!-- VIRTUAL TOUR (Matterport-style mock) -->
+        <section class="vtour">
+          <div class="vtour__inner">
+            <header class="vtour__head fade-up">
+              <span class="eyebrow">Visite virtuelle 360°</span>
+              <h2 class="serif">Explorez avant de <em>découvrir</em></h2>
+              <p>Suite Présidentielle, Spa, Restaurant gastronomique — promenez-vous dans nos espaces depuis cette borne.</p>
+            </header>
+            <div class="vtour__viewer fade-up" style="animation-delay: 150ms">
+              <div class="vtour__placeholder" :style="{ backgroundImage: vtourImage }">
+                <div class="vtour__overlay"></div>
+                <div class="vtour__controls">
+                  <button v-for="(s, i) in vtourScenes" :key="s.key" class="vtour-chip" :class="{ active: vtourIdx === i }" @click="vtourIdx = i">{{ s.label }}</button>
+                </div>
+                <div class="vtour__hud">
+                  <div class="vtour__hud-row">
+                    <span class="vtour__hud-num">{{ String(vtourIdx + 1).padStart(2, '0') }} / {{ String(vtourScenes.length).padStart(2, '0') }}</span>
+                    <span class="vtour__hud-title serif italic">{{ vtourScenes[vtourIdx].label }}</span>
+                  </div>
+                  <div class="vtour__compass">
+                    <svg viewBox="0 0 40 40" width="36" height="36"><circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><path d="M20 6 L23 18 L20 16 L17 18 Z" fill="white"/><text x="20" y="32" text-anchor="middle" fill="white" font-size="6" font-family="monospace">N</text></svg>
+                  </div>
+                </div>
+                <span class="vtour__hint">Touchez pour faire pivoter · Pincez pour zoomer</span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -349,9 +388,30 @@ onMounted(() => {
 }
 .colophon__dymension { letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
 
+/* VIRTUAL TOUR */
+.vtour { padding: var(--s-12) var(--s-8); background: var(--c-bg); }
+.vtour__inner { max-width: 1280px; margin: 0 auto; }
+.vtour__head { text-align: center; max-width: 640px; margin: 0 auto var(--s-8); }
+.vtour__head h2 { font-family: var(--c-font-display); font-size: 42px; font-weight: 500; margin: var(--s-2) 0 var(--s-3); color: var(--c-ink); letter-spacing: -0.01em; }
+.vtour__head h2 em { color: var(--c-accent-deep); font-style: italic; }
+.vtour__head p { color: var(--c-text-muted); font-size: 16px; line-height: 1.6; max-width: 520px; margin: 0 auto; }
+.vtour__viewer { aspect-ratio: 16 / 9; max-width: 1080px; margin: 0 auto; }
+.vtour__placeholder { position: relative; width: 100%; height: 100%; background-size: cover; background-position: center; transition: background-image 0.6s ease; overflow: hidden; }
+.vtour__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,32,46,0.18) 0%, rgba(20,32,46,0.6) 100%); }
+.vtour__controls { position: absolute; top: var(--s-4); left: var(--s-4); right: var(--s-4); display: flex; gap: var(--s-2); flex-wrap: wrap; z-index: 1; }
+.vtour-chip { padding: 8px 16px; background: rgba(20,32,46,0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(245,240,232,0.2); color: rgba(255,255,255,0.85); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.vtour-chip:hover { background: rgba(245,240,232,0.95); color: var(--c-ink); border-color: rgba(245,240,232,0.95); }
+.vtour-chip.active { background: var(--c-accent); color: white; border-color: var(--c-accent); }
+.vtour__hud { position: absolute; bottom: var(--s-4); left: var(--s-4); right: var(--s-4); display: flex; justify-content: space-between; align-items: flex-end; z-index: 1; }
+.vtour__hud-row { display: flex; flex-direction: column; gap: 4px; color: white; }
+.vtour__hud-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; opacity: 0.7; }
+.vtour__hud-title { font-family: var(--c-font-display); font-size: 26px; line-height: 1; }
+.vtour__hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.5); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; pointer-events: none; }
+
 @media (max-width: 1000px) {
   .grid { grid-template-columns: repeat(2, 1fr); }
   .colophon__row { grid-template-columns: 1fr 1fr; }
+  .vtour__hud-title { font-size: 18px; }
 }
 @media (max-width: 700px) {
   .grid { grid-template-columns: 1fr; }

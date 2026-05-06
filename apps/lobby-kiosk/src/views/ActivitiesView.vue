@@ -41,6 +41,45 @@ const condition = computed(() => {
   return 'Doux';
 });
 
+// 7-day forecast (deterministic per day-of-month so it stays stable during the demo)
+type WeatherCond = 'sunny' | 'cloudy' | 'rainy';
+const forecast = computed<{ day: string; date: string; tempMax: number; tempMin: number; cond: WeatherCond; suggestionId: string }[]>(() => {
+  const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const baseTemp = temp.value;
+  const out: { day: string; date: string; tempMax: number; tempMin: number; cond: WeatherCond; suggestionId: string }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now.value); d.setDate(d.getDate() + i);
+    const seed = d.getDate();
+    const variance = ((seed * 7) % 11) - 5;
+    const condIdx = (seed + i) % 4;
+    const cond: WeatherCond = condIdx < 2 ? 'sunny' : condIdx === 2 ? 'cloudy' : 'rainy';
+    const suggestionId = cond === 'rainy' ? 'atelier-bocuse' : cond === 'sunny' ? 'croisiere-saone' : 'visite-vieux-lyon';
+    out.push({
+      day: i === 0 ? 'Aujourd\'hui' : days[d.getDay()],
+      date: d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+      tempMax: baseTemp + variance,
+      tempMin: baseTemp + variance - 5,
+      cond,
+      suggestionId,
+    });
+  }
+  return out;
+});
+
+function condIcon(c: WeatherCond): string {
+  return c === 'sunny' ? 'M12 4v2m0 12v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'
+    : c === 'cloudy' ? 'M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6 1.5A4 4 0 0 0 6 19h11.5z'
+    : 'M16 13v8m-4-6v8m-4-6v8M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25';
+}
+function condLabel(c: WeatherCond): string {
+  return c === 'sunny' ? 'Ensoleillé' : c === 'cloudy' ? 'Nuageux' : 'Pluvieux';
+}
+function suggestForDay(c: WeatherCond): string {
+  if (c === 'rainy') return 'Atelier macarons à la Bocuse · intérieur';
+  if (c === 'cloudy') return 'Visite guidée du Vieux Lyon · couvert UNESCO';
+  return 'Croisière sur la Saône · au grand air';
+}
+
 onMounted(() => { setInterval(() => (now.value = new Date()), 60000); });
 
 // Booking flow
@@ -138,6 +177,32 @@ function reset() { sent.value = false; selected.value = null; room.value = ''; g
           <div class="weather-panel__col">
             <span class="eyebrow">Indice UV</span>
             <span class="weather-panel__uv serif">3</span>
+          </div>
+        </section>
+
+        <!-- 7-DAY FORECAST -->
+        <section class="forecast fade-up" style="animation-delay: 150ms">
+          <header class="forecast__head">
+            <span class="eyebrow">Prévisions 7 jours</span>
+            <h3 class="serif italic">La semaine en un coup d'œil</h3>
+          </header>
+          <div class="forecast__row">
+            <div v-for="(f, i) in forecast" :key="i" class="forecast-day" :class="{ 'forecast-day--today': i === 0 }">
+              <span class="forecast-day__name">{{ f.day }}</span>
+              <span class="forecast-day__date mono">{{ f.date }}</span>
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="forecast-day__icon">
+                <path :d="condIcon(f.cond)"/>
+              </svg>
+              <span class="forecast-day__cond">{{ condLabel(f.cond) }}</span>
+              <div class="forecast-day__temps">
+                <span class="forecast-day__max serif">{{ f.tempMax }}°</span>
+                <span class="forecast-day__min mono">{{ f.tempMin }}°</span>
+              </div>
+            </div>
+          </div>
+          <div class="forecast__suggest">
+            <span class="eyebrow">Suggestion contextuelle</span>
+            <p class="forecast__suggest-text serif italic">« {{ suggestForDay(forecast[0].cond) }} »</p>
           </div>
         </section>
 
@@ -263,6 +328,23 @@ function reset() { sent.value = false; selected.value = null; room.value = ''; g
 .weather-panel__sun { font-family: var(--c-font-display); font-size: 18px; color: var(--c-ink); font-feature-settings: 'tnum'; }
 .weather-panel__uv { font-size: 28px; color: var(--c-accent-deep); line-height: 1; }
 .weather-panel__divider { width: 1px; height: 36px; background: var(--c-border); }
+
+.forecast { padding: var(--s-6) var(--s-8); margin: var(--s-4) 0; background: var(--c-bg-card); border: 1px solid var(--c-border); }
+.forecast__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--s-4); }
+.forecast__head h3 { margin: 0; font-size: 20px; color: var(--c-ink); }
+.forecast__row { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--s-2); }
+.forecast-day { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--s-3) var(--s-2); border: 1px solid var(--c-border); transition: all 0.2s; }
+.forecast-day:hover { transform: translateY(-2px); border-color: var(--c-border-strong); }
+.forecast-day--today { background: var(--c-bg-soft); border-color: var(--c-accent); }
+.forecast-day__name { font-family: 'Cormorant Garamond', serif; font-size: 14px; font-weight: 500; color: var(--c-ink); }
+.forecast-day__date { color: var(--c-text-soft); font-size: 10px; }
+.forecast-day__icon { color: var(--c-accent-deep); margin: 4px 0; }
+.forecast-day__cond { font-size: 11px; color: var(--c-text-muted); letter-spacing: 0.04em; }
+.forecast-day__temps { display: flex; gap: 6px; align-items: baseline; }
+.forecast-day__max { font-size: 18px; color: var(--c-ink); font-feature-settings: 'tnum'; }
+.forecast-day__min { color: var(--c-text-soft); font-size: 11px; }
+.forecast__suggest { margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--c-border); display: flex; flex-direction: column; gap: 4px; }
+.forecast__suggest-text { font-size: 16px; color: var(--c-ink); margin: 0; }
 
 .rule { margin: var(--s-16) auto; max-width: 200px; }
 

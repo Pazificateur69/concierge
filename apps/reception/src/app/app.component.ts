@@ -222,16 +222,65 @@ const API = resolveApi();
 
           <hr class="rule" />
 
-          <span class="eyebrow">Historique</span>
+          <!-- GANTT TIMELINE -->
+          <span class="eyebrow">Cycle de vie</span>
+          <div class="gantt">
+            <div class="gantt__total mono">{{ ganttTotalLabel(o) }}</div>
+            <div class="gantt__bars">
+              <div *ngFor="let seg of ganttSegments(o)" class="gantt-seg" [style.width.%]="seg.pct" [style.background]="seg.color" [title]="seg.label + ' · ' + seg.durationLabel">
+                <span class="gantt-seg__label" *ngIf="seg.pct > 14">{{ seg.label }}</span>
+                <span class="gantt-seg__dur mono" *ngIf="seg.pct > 22">{{ seg.durationLabel }}</span>
+              </div>
+            </div>
+            <div class="gantt__axis">
+              <span *ngFor="let t of ganttTicks(o)" class="mono">{{ t }}</span>
+            </div>
+          </div>
+
+          <hr class="rule" />
+
+          <span class="eyebrow">Historique détaillé</span>
           <ol class="timeline">
-            <li *ngFor="let s of o.statusHistory">
-              <span class="timeline__dot"></span>
+            <li *ngFor="let s of o.statusHistory; let last = last; let i = index">
+              <span class="timeline__dot" [style.background]="statusColor(s.status)"></span>
               <div>
                 <span class="timeline__status">{{ statusLabel(s.status) }}</span>
-                <span class="timeline__time mono">{{ formatDateTime(s.at) }}</span>
+                <span class="timeline__time mono">{{ formatDateTime(s.at) }} <span *ngIf="i > 0" class="text-soft">· +{{ stepDuration(o.statusHistory, i) }}</span></span>
               </div>
             </li>
           </ol>
+
+          <hr class="rule" />
+
+          <!-- HOTEL MINI-MAP -->
+          <span class="eyebrow">Localisation chambre {{ o.room }}</span>
+          <div class="floor-map">
+            <span class="floor-map__legend mono">Étage {{ floorOf(o.room) }} · {{ wingOf(o.room) }}</span>
+            <svg viewBox="0 0 320 200" class="floor-map__svg" preserveAspectRatio="xMidYMid meet">
+              <!-- Building outline -->
+              <rect x="8" y="14" width="304" height="172" fill="none" stroke="currentColor" stroke-opacity="0.3" stroke-width="1"/>
+              <line x1="160" y1="14" x2="160" y2="186" stroke="currentColor" stroke-opacity="0.15" stroke-dasharray="3,3"/>
+              <!-- Floors -->
+              <g *ngFor="let f of [1,2,3,4]">
+                <line [attr.x1]="8" [attr.x2]="312" [attr.y1]="14 + f * 34" [attr.y2]="14 + f * 34" stroke="currentColor" stroke-opacity="0.08"/>
+                <text x="14" [attr.y]="14 + f * 34 - 4" class="floor-map__floor-label">{{ 5 - f }}</text>
+              </g>
+              <text x="14" y="32" class="floor-map__floor-label">5</text>
+              <!-- Wings labels -->
+              <text x="80" y="200" class="floor-map__wing-label">Aile Ouest</text>
+              <text x="240" y="200" class="floor-map__wing-label">Aile Est</text>
+              <!-- Other in-progress orders -->
+              <g *ngFor="let pin of otherActivePins(o)">
+                <circle [attr.cx]="pin.x" [attr.cy]="pin.y" r="3" fill="currentColor" opacity="0.32"/>
+              </g>
+              <!-- Current order pin -->
+              <g class="floor-map__current">
+                <circle [attr.cx]="roomPosition(o.room).x" [attr.cy]="roomPosition(o.room).y" r="14" [attr.fill]="statusColor(o.status)" opacity="0.18"/>
+                <circle [attr.cx]="roomPosition(o.room).x" [attr.cy]="roomPosition(o.room).y" r="6" [attr.fill]="statusColor(o.status)"/>
+                <text [attr.x]="roomPosition(o.room).x" [attr.y]="roomPosition(o.room).y - 12" text-anchor="middle" class="floor-map__pin-label">{{ o.room }}</text>
+              </g>
+            </svg>
+          </div>
         </div>
 
         <footer class="detail__foot">
@@ -491,6 +540,28 @@ const API = resolveApi();
     .shortcuts__list { list-style: none; padding: 18px 22px 22px; margin: 0; display: flex; flex-direction: column; gap: 10px; }
     .shortcuts__list li { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--c-ink); }
     .shortcuts__list kbd { display: inline-block; min-width: 28px; padding: 4px 10px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; background: var(--c-paper); border: 1px solid var(--c-border-strong); color: var(--c-ink); }
+
+    /* GANTT */
+    .gantt { padding: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+    .gantt__total { color: var(--c-text-muted); font-size: 11px; }
+    .gantt__bars { display: flex; height: 28px; border: 1px solid var(--c-border); background: var(--c-paper); overflow: hidden; }
+    .gantt-seg { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 0 8px; color: white; font-size: 11px; line-height: 1; min-width: 4px; transition: all 0.3s; cursor: default; }
+    .gantt-seg:hover { filter: brightness(1.08); }
+    .gantt-seg__label { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 9px; }
+    .gantt-seg__dur { color: rgba(255,255,255,0.78); font-size: 10px; margin-top: 2px; }
+    .gantt__axis { display: flex; justify-content: space-between; color: var(--c-text-soft); font-size: 10px; padding: 0 2px; }
+
+    .text-soft { color: var(--c-text-soft); }
+
+    /* FLOOR MAP */
+    .floor-map { padding: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+    .floor-map__legend { color: var(--c-text-muted); font-size: 11px; }
+    .floor-map__svg { width: 100%; height: 200px; color: var(--c-ink); }
+    .floor-map__floor-label { font-family: 'Cormorant Garamond', serif; font-size: 11px; font-weight: 500; fill: var(--c-text-soft); }
+    .floor-map__wing-label { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; fill: var(--c-text-soft); text-anchor: middle; font-weight: 600; }
+    .floor-map__pin-label { font-family: 'Cormorant Garamond', serif; font-size: 11px; font-weight: 600; fill: var(--c-ink); }
+    .floor-map__current circle { animation: pin-pulse 2s ease-in-out infinite; }
+    @keyframes pin-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 
     /* SOS */
     .topbar-btn--sos { background: rgba(145,53,40,0.06); color: var(--c-danger); border-color: rgba(145,53,40,0.3); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; width: auto; padding: 0 12px; }
@@ -865,6 +936,81 @@ export class AppComponent implements OnInit, OnDestroy {
   formatHistoryDate(iso: string) {
     return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
+  // GANTT helpers
+  statusColor(s: string): string {
+    return ({ pending: '#95701a', accepted: '#1e40af', preparing: '#4338ca', delivered: '#36644a', cancelled: '#913528' } as Record<string, string>)[s] || '#5a6675';
+  }
+  ganttSegments(o: Order): { label: string; pct: number; color: string; durationLabel: string }[] {
+    const hist = o.statusHistory || [];
+    if (!hist.length) return [];
+    const start = new Date(hist[0].at).getTime();
+    const lastTerminal = ['delivered', 'cancelled'].includes(o.status);
+    const end = lastTerminal ? new Date(hist[hist.length - 1].at).getTime() : Date.now();
+    const totalMs = Math.max(end - start, 60000);
+    const segs: { label: string; pct: number; color: string; durationLabel: string }[] = [];
+    for (let i = 0; i < hist.length; i++) {
+      const segStart = new Date(hist[i].at).getTime();
+      const segEnd = i + 1 < hist.length ? new Date(hist[i + 1].at).getTime() : end;
+      const dur = Math.max(segEnd - segStart, 0);
+      if (dur === 0) continue;
+      const minutes = Math.floor(dur / 60000);
+      const seconds = Math.floor((dur % 60000) / 1000);
+      const durationLabel = minutes > 0 ? `${minutes}min` : `${seconds}s`;
+      segs.push({ label: this.statusLabel(hist[i].status), pct: (dur / totalMs) * 100, color: this.statusColor(hist[i].status), durationLabel });
+    }
+    return segs;
+  }
+  ganttTotalLabel(o: Order): string {
+    const start = new Date((o.statusHistory || [{ at: o.createdAt }])[0].at).getTime();
+    const end = ['delivered', 'cancelled'].includes(o.status) && o.statusHistory?.length ? new Date(o.statusHistory[o.statusHistory.length - 1].at).getTime() : Date.now();
+    const min = Math.floor((end - start) / 60000);
+    return `Durée totale ${min}min · ${o.statusHistory?.length ?? 1} étapes`;
+  }
+  ganttTicks(o: Order): string[] {
+    const start = new Date((o.statusHistory || [{ at: o.createdAt }])[0].at).getTime();
+    const end = ['delivered', 'cancelled'].includes(o.status) && o.statusHistory?.length ? new Date(o.statusHistory[o.statusHistory.length - 1].at).getTime() : Date.now();
+    const fmt = (ts: number) => new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return [fmt(start), fmt(end)];
+  }
+  stepDuration(history: any[], i: number): string {
+    if (i === 0) return '0min';
+    const prev = new Date(history[i - 1].at).getTime();
+    const cur = new Date(history[i].at).getTime();
+    const dur = Math.max(cur - prev, 0);
+    const m = Math.floor(dur / 60000);
+    const s = Math.floor((dur % 60000) / 1000);
+    return m > 0 ? `${m}min` : `${s}s`;
+  }
+
+  // FLOOR MAP helpers — derive coords from room number (1-2 digits = floor, last 2 = position)
+  floorOf(room: string): number {
+    const n = parseInt(room.replace(/\D/g, ''), 10);
+    if (!Number.isFinite(n)) return 1;
+    return Math.max(1, Math.min(5, Math.floor(n / 100) || 1));
+  }
+  wingOf(room: string): string {
+    const n = parseInt(room.replace(/\D/g, ''), 10);
+    if (!Number.isFinite(n)) return 'Aile Est';
+    return (n % 100) < 50 ? 'Aile Ouest' : 'Aile Est';
+  }
+  roomPosition(room: string): { x: number; y: number } {
+    const n = parseInt(room.replace(/\D/g, ''), 10);
+    if (!Number.isFinite(n)) return { x: 160, y: 100 };
+    const floor = this.floorOf(room);
+    const pos = n % 100;
+    const isWest = pos < 50;
+    const localPos = isWest ? pos : pos - 50;
+    const xRange = isWest ? [16, 152] : [168, 304];
+    const x = xRange[0] + ((localPos % 12) / 11) * (xRange[1] - xRange[0]);
+    const y = 14 + (5 - floor) * 34 + 17;
+    return { x: Math.round(x), y: Math.round(y) };
+  }
+  otherActivePins(currentOrder: Order): { x: number; y: number }[] {
+    return this.orders()
+      .filter((o) => o.id !== currentOrder.id && ['pending', 'accepted', 'preparing'].includes(o.status))
+      .map((o) => this.roomPosition(o.room));
+  }
+
   exportHistoryCSV() {
     const rows = this.historyOrders().map((o) => ({
       id: o.id, room: o.room, status: o.status, source: o.source,
