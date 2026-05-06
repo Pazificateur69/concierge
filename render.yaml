@@ -1,5 +1,6 @@
 # Render Blueprint — déploie les 6 services backend
 # https://render.com/docs/blueprint-spec
+# Build filters : un service ne se redéploie que si son code OU les packages partagés changent.
 
 envVarGroups:
   - name: concierge-shared
@@ -16,11 +17,21 @@ envVarGroups:
         generateValue: true
 
 services:
+  # ───────── API Gateway ─────────
   - type: web
     name: concierge-gateway
     runtime: node
     region: frankfurt
     plan: free
+    buildFilter:
+      paths:
+        - apps/api-gateway/**
+        - packages/types/**
+        - packages/nest-common/**
+        - render.yaml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter api-gateway build
     startCommand: cd apps/api-gateway && node dist/main.js
     healthCheckPath: /health
@@ -39,11 +50,21 @@ services:
       - key: SERVICE_SURVEY_URL
         fromService: { type: web, name: concierge-survey, property: hostport }
 
+  # ───────── auth-service ─────────
   - type: web
     name: concierge-auth
     runtime: node
     region: frankfurt
     plan: free
+    buildFilter:
+      paths:
+        - services/auth-service/**
+        - packages/types/**
+        - packages/nest-common/**
+        - render.yaml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter auth-service build
     startCommand: cd services/auth-service && node dist/main.js
     healthCheckPath: /auth/health
@@ -52,11 +73,21 @@ services:
       - key: PORT
         value: 10000
 
+  # ───────── tenant-service ─────────
   - type: web
     name: concierge-tenant
     runtime: node
     region: frankfurt
     plan: free
+    buildFilter:
+      paths:
+        - services/tenant-service/**
+        - packages/types/**
+        - packages/nest-common/**
+        - render.yaml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter tenant-service build
     startCommand: cd services/tenant-service && node dist/main.js
     envVars:
@@ -64,11 +95,21 @@ services:
       - key: PORT
         value: 10000
 
+  # ───────── content-service ─────────
   - type: web
     name: concierge-content
     runtime: node
     region: frankfurt
     plan: free
+    buildFilter:
+      paths:
+        - services/content-service/**
+        - packages/types/**
+        - packages/nest-common/**
+        - render.yaml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter content-service build
     startCommand: cd services/content-service && node dist/main.js
     envVars:
@@ -76,11 +117,21 @@ services:
       - key: PORT
         value: 10000
 
+  # ───────── orders-service ─────────
   - type: web
     name: concierge-orders
     runtime: node
     region: frankfurt
     plan: free
+    buildFilter:
+      paths:
+        - services/orders-service/**
+        - packages/types/**
+        - packages/nest-common/**
+        - render.yaml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter orders-service build
     startCommand: cd services/orders-service && node dist/main.js
     envVars:
@@ -88,11 +139,21 @@ services:
       - key: PORT
         value: 10000
 
+  # ───────── survey-service ─────────
   - type: web
     name: concierge-survey
     runtime: node
     region: frankfurt
     plan: free
+    buildFilter:
+      paths:
+        - services/survey-service/**
+        - packages/types/**
+        - packages/nest-common/**
+        - render.yaml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter survey-service build
     startCommand: cd services/survey-service && node dist/main.js
     envVars:
