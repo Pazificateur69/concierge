@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# Concierge pre-commit hook — keep diffs clean and types valid
+
+# 1. Format staged files via prettier (fast)
+pnpm exec lint-staged --no-stash 2>/dev/null || true
+
+# 2. Quick type-check on packages/types and nest-common only
+pnpm --filter @concierge/types --filter @concierge/nest-common run build > /dev/null 2>&1 || {
+  echo "Pre-commit: type-check failed on shared packages — fix before committing."
+  exit 1
+}
+
+echo "Pre-commit checks passed"

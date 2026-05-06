@@ -497,6 +497,11 @@ const API = resolveApi();
 
           <!-- SETTINGS -->
           <section *ngIf="tab() === 'settings'" class="content">
+            <div class="settings-tabs">
+              <button class="settings-tab" *ngFor="let s of settingsTabs" [class.active]="settingsTab() === s.id" (click)="settingsTab.set(s.id)">{{ s.label }}</button>
+            </div>
+
+            <ng-container *ngIf="settingsTab() === 'general'">
             <div class="settings-grid">
               <div class="card">
                 <header class="card__head">
@@ -575,6 +580,216 @@ const API = resolveApi();
                 </div>
               </div>
             </div>
+            </ng-container>
+
+            <!-- THEME BUILDER -->
+            <ng-container *ngIf="settingsTab() === 'theme'">
+            <div class="card">
+              <header class="card__head">
+                <h3 class="serif">Theme builder</h3>
+                <span class="card__hint">Personnalisez l'identité visuelle de votre tenant</span>
+              </header>
+              <div class="theme-grid">
+                <div class="theme-controls">
+                  <label class="theme-row">
+                    <span class="eyebrow">Couleur encre</span>
+                    <input type="color" [(ngModel)]="themeInk" (change)="applyTheme()" />
+                    <span class="mono small">{{ themeInk }}</span>
+                  </label>
+                  <label class="theme-row">
+                    <span class="eyebrow">Couleur or</span>
+                    <input type="color" [(ngModel)]="themeAccent" (change)="applyTheme()" />
+                    <span class="mono small">{{ themeAccent }}</span>
+                  </label>
+                  <label class="theme-row">
+                    <span class="eyebrow">Couleur ivoire</span>
+                    <input type="color" [(ngModel)]="themePaper" (change)="applyTheme()" />
+                    <span class="mono small">{{ themePaper }}</span>
+                  </label>
+                  <label class="theme-row">
+                    <span class="eyebrow">Logo URL</span>
+                    <input [(ngModel)]="themeLogo" placeholder="https://…/logo.svg" />
+                  </label>
+                  <div class="theme-actions">
+                    <button class="btn-secondary" (click)="resetTheme()">Réinitialiser</button>
+                    <button class="btn-primary" (click)="saveTheme()">Enregistrer</button>
+                  </div>
+                </div>
+                <div class="theme-preview" [style.background]="themePaper">
+                  <span class="theme-preview__eyebrow eyebrow" [style.color]="themeAccent">Aperçu</span>
+                  <h2 class="theme-preview__title serif" [style.color]="themeInk">Le Royal Lyon</h2>
+                  <hr class="theme-preview__rule" [style.background]="themeAccent" />
+                  <p class="theme-preview__lead" [style.color]="themeInk">Votre conciergerie, à portée de regard.</p>
+                  <button class="theme-preview__btn" [style.background]="themeInk" [style.color]="themePaper">Découvrir</button>
+                  <button class="theme-preview__btn-2" [style.color]="themeAccent" [style.borderColor]="themeAccent">Réserver</button>
+                </div>
+              </div>
+            </div>
+            </ng-container>
+
+            <!-- AUDIT LOG -->
+            <ng-container *ngIf="settingsTab() === 'audit'">
+            <div class="card">
+              <header class="card__head">
+                <h3 class="serif">Audit log</h3>
+                <span class="card__hint">{{ auditLog().length }} actions · 30 derniers jours</span>
+              </header>
+              <table class="data-table">
+                <thead><tr><th>Date</th><th>Acteur</th><th>Action</th><th>Cible</th><th>IP</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let a of auditLog().slice(0, 50)">
+                    <td class="mono small">{{ formatDate(a.at) }}</td>
+                    <td>{{ a.actor }}</td>
+                    <td><span class="audit-action" [attr.data-kind]="a.kind">{{ a.action }}</span></td>
+                    <td class="text-muted">{{ a.target }}</td>
+                    <td class="mono small text-faint">{{ a.ip }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            </ng-container>
+
+            <!-- USERS -->
+            <ng-container *ngIf="settingsTab() === 'users'">
+            <div class="card">
+              <header class="card__head">
+                <h3 class="serif">Équipe</h3>
+                <button class="btn-primary" (click)="openNewUser()">+ Inviter un membre</button>
+              </header>
+              <table class="data-table">
+                <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let u of teamUsers()">
+                    <td><strong>{{ u.firstName }} {{ u.lastName }}</strong></td>
+                    <td class="mono small">{{ u.email }}</td>
+                    <td><span class="role-pill" [attr.data-role]="u.role">{{ u.role }}</span></td>
+                    <td><span class="status-pill" [class.active]="u.active">{{ u.active ? 'Actif' : 'Suspendu' }}</span></td>
+                    <td class="text-muted small">{{ u.lastLogin }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            </ng-container>
+
+            <!-- A/B TESTS -->
+            <ng-container *ngIf="settingsTab() === 'experiments'">
+            <div class="card">
+              <header class="card__head">
+                <h3 class="serif">Expérimentations A/B</h3>
+                <button class="btn-primary" (click)="openNewExperiment()">+ Nouvelle expérience</button>
+              </header>
+              <ul class="exp-list">
+                <li *ngFor="let e of experiments()" class="exp-item">
+                  <div class="exp-head">
+                    <span class="serif" style="font-size:18px">{{ e.name }}</span>
+                    <span class="exp-status" [attr.data-status]="e.status">{{ e.status }}</span>
+                  </div>
+                  <div class="exp-body">
+                    <p class="text-muted small">{{ e.hypothesis }}</p>
+                    <div class="exp-variants">
+                      <div *ngFor="let v of e.variants" class="exp-variant">
+                        <span class="eyebrow">Variant {{ v.label }}</span>
+                        <span class="exp-rate serif">{{ v.completionRate }}%</span>
+                        <span class="text-muted small">{{ v.sample }} échantillons · NPS {{ v.nps }}</span>
+                      </div>
+                    </div>
+                    <span class="exp-winner" *ngIf="e.winner">Gagnant : variant {{ e.winner }} (significativité {{ e.significance }}%)</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            </ng-container>
+
+            <!-- SCHEDULING -->
+            <ng-container *ngIf="settingsTab() === 'scheduling'">
+            <div class="card">
+              <header class="card__head">
+                <h3 class="serif">Planification de notifications</h3>
+                <span class="card__hint">Push contextuel basé sur l'heure</span>
+              </header>
+              <ul class="sched-list">
+                <li *ngFor="let s of schedules()" class="sched-item">
+                  <div>
+                    <span class="serif" style="font-size:18px">{{ s.title }}</span>
+                    <p class="text-muted small">{{ s.message }}</p>
+                  </div>
+                  <span class="sched-time mono">{{ s.cron }}</span>
+                  <label class="toggle"><input type="checkbox" [checked]="s.enabled" (change)="toggleSchedule(s.id)"/><span class="toggle__slider"></span></label>
+                </li>
+              </ul>
+              <button class="btn-secondary" style="margin-top: 16px" (click)="addSchedule()">+ Nouveau push planifié</button>
+            </div>
+            </ng-container>
+
+            <!-- IMPORT / REPORT -->
+            <ng-container *ngIf="settingsTab() === 'import'">
+            <div class="charts-row">
+              <div class="card">
+                <header class="card__head">
+                  <h3 class="serif">Import en masse</h3>
+                </header>
+                <div class="settings-row">
+                  <div>
+                    <span class="serif" style="font-size:18px">Carte du restaurant</span>
+                    <p class="text-muted small">Format CSV : name;category;price;preparationMinutes;available;image</p>
+                  </div>
+                  <label class="btn-secondary import-btn">
+                    Importer CSV
+                    <input type="file" accept=".csv" (change)="importMenuCSV($event)" hidden />
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div>
+                    <span class="serif" style="font-size:18px">Adresses (POIs)</span>
+                    <p class="text-muted small">Format CSV : name;category;lat;lng;rating;hours;phone</p>
+                  </div>
+                  <label class="btn-secondary import-btn">
+                    Importer CSV
+                    <input type="file" accept=".csv" (change)="importPoisCSV($event)" hidden />
+                  </label>
+                </div>
+              </div>
+
+              <div class="card">
+                <header class="card__head">
+                  <h3 class="serif">Reporting</h3>
+                </header>
+                <div class="settings-row">
+                  <div>
+                    <span class="serif" style="font-size:18px">Rapport hebdomadaire PDF</span>
+                    <p class="text-muted small">CA, NPS, top plats, alertes — envoyé chaque lundi</p>
+                  </div>
+                  <button class="btn-secondary" (click)="generateWeeklyReport()">Générer maintenant</button>
+                </div>
+                <div class="settings-row">
+                  <div>
+                    <span class="serif" style="font-size:18px">Email du destinataire</span>
+                    <input [(ngModel)]="reportEmail" type="email" placeholder="manager@hotel.fr" style="margin-top:6px; padding:8px 12px; border:1px solid var(--c-border-strong); font-family: 'JetBrains Mono', monospace; font-size: 12px; min-width: 220px;" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            </ng-container>
+
+            <!-- EMAIL TEMPLATES -->
+            <ng-container *ngIf="settingsTab() === 'templates'">
+            <div class="card">
+              <header class="card__head">
+                <h3 class="serif">Templates email</h3>
+                <span class="card__hint">{{ emailTemplates().length }} templates</span>
+              </header>
+              <div class="tpl-grid">
+                <article *ngFor="let t of emailTemplates()" class="tpl-card">
+                  <header><span class="eyebrow">{{ t.trigger }}</span><h4 class="serif">{{ t.name }}</h4></header>
+                  <textarea [(ngModel)]="t.body" rows="5" class="tpl-textarea"></textarea>
+                  <div class="tpl-foot">
+                    <span class="text-muted small">Variables : {{ t.variables.join(' · ') }}</span>
+                    <button class="btn-secondary" (click)="saveTemplate(t)">Enregistrer</button>
+                  </div>
+                </article>
+              </div>
+            </div>
+            </ng-container>
           </section>
 
           <!-- ORDERS -->
@@ -1371,6 +1586,67 @@ const API = resolveApi();
 
     /* SETTINGS */
     .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .settings-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--c-border); margin-bottom: 16px; overflow-x: auto; }
+    .settings-tab { padding: 10px 18px; background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-text-muted); transition: all 0.2s; white-space: nowrap; }
+    .settings-tab:hover { color: var(--c-ink); }
+    .settings-tab.active { color: var(--c-ink); border-bottom-color: var(--c-accent); }
+
+    /* THEME BUILDER */
+    .theme-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; padding: 12px 0; }
+    .theme-controls { display: flex; flex-direction: column; gap: 16px; }
+    .theme-row { display: grid; grid-template-columns: 110px 56px 1fr; align-items: center; gap: 12px; }
+    .theme-row input[type="color"] { width: 56px; height: 40px; border: 1px solid var(--c-border-strong); cursor: pointer; padding: 0; background: transparent; }
+    .theme-row input[type="text"], .theme-row input:not([type]) { padding: 10px 12px; border: 1px solid var(--c-border-strong); font-family: 'JetBrains Mono', monospace; font-size: 12px; grid-column: span 2; }
+    .theme-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .theme-preview { padding: 32px; min-height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 12px; border: 1px solid var(--c-border); transition: all 0.3s; }
+    .theme-preview__eyebrow { letter-spacing: 0.2em; text-transform: uppercase; font-size: 11px; font-weight: 600; }
+    .theme-preview__title { font-size: 36px; font-weight: 500; line-height: 1.05; letter-spacing: -0.02em; margin: 0; }
+    .theme-preview__rule { width: 64px; height: 1px; border: 0; margin: 4px 0 8px; }
+    .theme-preview__lead { font-size: 14px; line-height: 1.5; max-width: 320px; margin: 0; opacity: 0.78; }
+    .theme-preview__btn { padding: 12px 22px; font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; border: none; cursor: pointer; }
+    .theme-preview__btn-2 { padding: 12px 22px; font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; background: transparent; border: 1px solid currentColor; cursor: pointer; }
+
+    /* AUDIT */
+    .audit-action { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.04em; padding: 3px 8px; background: var(--c-paper); }
+    .audit-action[data-kind="auth"] { color: var(--c-text-muted); }
+    .audit-action[data-kind="mutation"] { color: var(--c-warning); background: rgba(149,112,26,0.06); }
+    .audit-action[data-kind="config"] { color: var(--c-success); background: rgba(54,100,74,0.06); }
+
+    /* USERS */
+    .role-pill { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 10px; border: 1px solid currentColor; }
+    .role-pill[data-role="admin"] { color: var(--c-accent-deep); }
+    .role-pill[data-role="manager"] { color: #1e40af; }
+    .role-pill[data-role="staff"] { color: var(--c-text-muted); }
+    .role-pill[data-role="housekeeping"] { color: #7a4f8b; }
+    .status-pill { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 10px; color: var(--c-danger); border: 1px solid currentColor; }
+    .status-pill.active { color: var(--c-success); }
+
+    /* EXPERIMENTS */
+    .exp-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+    .exp-item { padding: 16px; border: 1px solid var(--c-border); }
+    .exp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .exp-status { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 10px; border: 1px solid currentColor; }
+    .exp-status[data-status="running"] { color: var(--c-success); background: rgba(54,100,74,0.06); }
+    .exp-status[data-status="completed"] { color: var(--c-text-muted); }
+    .exp-status[data-status="draft"] { color: var(--c-warning); }
+    .exp-variants { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+    .exp-variant { padding: 12px; background: var(--c-paper); display: flex; flex-direction: column; gap: 4px; }
+    .exp-rate { font-size: 28px; color: var(--c-ink); font-feature-settings: 'tnum'; }
+    .exp-winner { display: inline-block; margin-top: 8px; padding: 6px 12px; background: rgba(54,100,74,0.08); color: var(--c-success); font-size: 12px; font-weight: 600; }
+
+    /* SCHEDULES */
+    .sched-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+    .sched-item { display: grid; grid-template-columns: 1fr 110px 50px; gap: 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--c-border); }
+    .sched-time { color: var(--c-accent-deep); font-size: 11px; }
+
+    /* TEMPLATES */
+    .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 8px 0; }
+    .tpl-card { padding: 16px; background: var(--c-paper); display: flex; flex-direction: column; gap: 10px; }
+    .tpl-card header { display: flex; flex-direction: column; gap: 2px; }
+    .tpl-card h4 { margin: 2px 0 0; font-size: 18px; color: var(--c-ink); }
+    .tpl-textarea { width: 100%; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); color: var(--c-ink); resize: vertical; }
+    .tpl-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .import-btn { cursor: pointer; }
     .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--c-border); gap: 16px; }
     .settings-row:last-child { border-bottom: none; }
     .settings-row p { margin: 4px 0 0; }
@@ -1424,6 +1700,63 @@ export class AppComponent implements OnInit {
   ];
   apiDocsUrl = `${API}/api/docs`;
   apiUrl = API;
+  settingsTab = signal<'general' | 'theme' | 'audit' | 'users' | 'experiments' | 'scheduling' | 'import' | 'templates'>('general');
+  settingsTabs = [
+    { id: 'general' as const, label: 'Général' },
+    { id: 'theme' as const, label: 'Theme builder' },
+    { id: 'users' as const, label: 'Équipe' },
+    { id: 'audit' as const, label: 'Audit log' },
+    { id: 'experiments' as const, label: 'A/B tests' },
+    { id: 'scheduling' as const, label: 'Planification' },
+    { id: 'templates' as const, label: 'Email templates' },
+    { id: 'import' as const, label: 'Import & rapports' },
+  ];
+  themeInk = localStorage.getItem('theme_ink') || '#14202e';
+  themeAccent = localStorage.getItem('theme_accent') || '#b8985a';
+  themePaper = localStorage.getItem('theme_paper') || '#f5f0e8';
+  themeLogo = localStorage.getItem('theme_logo') || '';
+  reportEmail = '';
+  auditLog = signal<{ at: string; actor: string; action: string; kind: string; target: string; ip: string }[]>([
+    { at: new Date(Date.now() - 1800000).toISOString(), actor: 'admin@royal-lyon.fr', action: 'POI.update', kind: 'mutation', target: 'Bouchon Daniel & Denise', ip: '82.66.12.4' },
+    { at: new Date(Date.now() - 3700000).toISOString(), actor: 'admin@royal-lyon.fr', action: 'menu.create', kind: 'mutation', target: 'Risotto safrané', ip: '82.66.12.4' },
+    { at: new Date(Date.now() - 7300000).toISOString(), actor: 'manager@royal-lyon.fr', action: 'order.cancel', kind: 'mutation', target: '#A8F2C9', ip: '82.66.12.18' },
+    { at: new Date(Date.now() - 18000000).toISOString(), actor: 'admin@royal-lyon.fr', action: 'login', kind: 'auth', target: '—', ip: '82.66.12.4' },
+    { at: new Date(Date.now() - 90000000).toISOString(), actor: 'staff@royal-lyon.fr', action: 'survey.publish', kind: 'mutation', target: 'satisfaction-checkout', ip: '82.66.12.7' },
+    { at: new Date(Date.now() - 86400000 * 2).toISOString(), actor: 'admin@royal-lyon.fr', action: 'theme.update', kind: 'config', target: 'ink → #14202e', ip: '82.66.12.4' },
+    { at: new Date(Date.now() - 86400000 * 5).toISOString(), actor: 'admin@royal-lyon.fr', action: 'user.invite', kind: 'config', target: 'newstaff@royal-lyon.fr', ip: '82.66.12.4' },
+  ]);
+  teamUsers = signal<{ firstName: string; lastName: string; email: string; role: string; active: boolean; lastLogin: string }[]>([
+    { firstName: 'Sophie', lastName: 'Lefèvre', email: 'admin@royal-lyon.fr', role: 'admin', active: true, lastLogin: 'il y a 2h' },
+    { firstName: 'Marc', lastName: 'Bertrand', email: 'manager@royal-lyon.fr', role: 'manager', active: true, lastLogin: 'il y a 1j' },
+    { firstName: 'Léa', lastName: 'Petit', email: 'staff@royal-lyon.fr', role: 'staff', active: true, lastLogin: 'il y a 30min' },
+    { firstName: 'Antoine', lastName: 'Moreau', email: 'cuisine@royal-lyon.fr', role: 'staff', active: true, lastLogin: 'il y a 5h' },
+    { firstName: 'Julie', lastName: 'Dubois', email: 'housekeeping@royal-lyon.fr', role: 'housekeeping', active: false, lastLogin: 'il y a 2 semaines' },
+  ]);
+  experiments = signal<{ id: string; name: string; status: string; hypothesis: string; variants: { label: string; completionRate: number; sample: number; nps: number }[]; winner?: string; significance?: number }[]>([
+    { id: 'cta-color', name: 'Couleur CTA bornes', status: 'running', hypothesis: 'Un bouton or convertit mieux qu\'un bouton ink sur la borne lobby.', variants: [
+      { label: 'A · Ink', completionRate: 67, sample: 412, nps: 58 },
+      { label: 'B · Or', completionRate: 71, sample: 408, nps: 62 },
+    ] },
+    { id: 'survey-length', name: 'Longueur enquête checkout', status: 'completed', hypothesis: 'Une enquête à 3 questions complète plus qu\'une à 5.', variants: [
+      { label: 'A · 5 questions', completionRate: 64, sample: 312, nps: 60 },
+      { label: 'B · 3 questions', completionRate: 89, sample: 318, nps: 64 },
+    ], winner: 'B', significance: 95 },
+    { id: 'chat-greeting', name: 'Salutation chat concierge', status: 'draft', hypothesis: 'Une question ouverte engage davantage qu\'une suggestion.', variants: [
+      { label: 'A · Comment puis-je…', completionRate: 0, sample: 0, nps: 0 },
+      { label: 'B · Souhaitez-vous des suggestions ?', completionRate: 0, sample: 0, nps: 0 },
+    ] },
+  ]);
+  schedules = signal<{ id: string; title: string; message: string; cron: string; enabled: boolean }[]>([
+    { id: '1', title: 'Réveil petit-déjeuner', message: 'Bonjour ! Le petit-déjeuner est servi en salle Voltaire jusqu\'à 10h30.', cron: '0 7 * * *', enabled: true },
+    { id: '2', title: 'Rappel réservation table', message: 'Votre table vous attend à 19h30.', cron: '0 19 * * *', enabled: true },
+    { id: '3', title: 'Smiley check-out', message: 'Avant de partir, partagez-nous votre expérience.', cron: '0 11 * * *', enabled: true },
+    { id: '4', title: 'Spa closure', message: 'Le spa ferme dans 30 minutes.', cron: '30 20 * * *', enabled: false },
+  ]);
+  emailTemplates = signal<{ id: string; trigger: string; name: string; body: string; variables: string[] }[]>([
+    { id: 'order-confirm', trigger: 'order.created', name: 'Confirmation de commande', body: 'Bonjour {{guestName}},\n\nVotre commande #{{orderId}} pour la chambre {{room}} est confirmée. Total : {{total}} €.\n\nElle vous sera servie dans 15-20 minutes.\n\nCordialement,\n{{tenantName}}', variables: ['guestName', 'orderId', 'room', 'total', 'tenantName'] },
+    { id: 'survey-invite', trigger: 'checkout', name: 'Invitation enquête', body: 'Bonjour {{guestName}},\n\nMerci d\'avoir séjourné chez {{tenantName}}. Pourriez-vous nous accorder 2 minutes pour partager votre expérience ?\n\n{{surveyLink}}\n\nÀ très vite,\nLa direction', variables: ['guestName', 'tenantName', 'surveyLink'] },
+    { id: 'spa-confirm', trigger: 'booking.spa', name: 'Confirmation spa', body: 'Bonjour {{guestName}},\n\nVotre soin {{treatment}} est réservé le {{date}} à {{time}}. Présentez-vous au spa 10 minutes avant.\n\nDétente assurée,\nL\'équipe Spa', variables: ['guestName', 'treatment', 'date', 'time'] },
+  ]);
   hours = Array.from({ length: 24 }, (_, i) => i);
   daysShort = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   private token = '';
@@ -2068,6 +2401,192 @@ export class AppComponent implements OnInit {
   rgpdAnonymize() {
     if (!confirm('Anonymiser toutes les données client (chambres, noms) sur ce tenant ? Action irréversible.')) return;
     this.toast('info', 'Demande envoyée — traitement RGPD en cours');
+  }
+
+  // Theme builder
+  applyTheme() {
+    const root = document.querySelector('app-root') as HTMLElement | null;
+    if (!root) return;
+    root.style.setProperty('--c-ink', this.themeInk);
+    root.style.setProperty('--c-accent', this.themeAccent);
+    root.style.setProperty('--c-paper', this.themePaper);
+  }
+  saveTheme() {
+    localStorage.setItem('theme_ink', this.themeInk);
+    localStorage.setItem('theme_accent', this.themeAccent);
+    localStorage.setItem('theme_paper', this.themePaper);
+    localStorage.setItem('theme_logo', this.themeLogo);
+    this.applyTheme();
+    this.toast('success', 'Theme enregistré pour ce tenant');
+  }
+  resetTheme() {
+    this.themeInk = '#14202e'; this.themeAccent = '#b8985a'; this.themePaper = '#f5f0e8'; this.themeLogo = '';
+    ['theme_ink', 'theme_accent', 'theme_paper', 'theme_logo'].forEach((k) => localStorage.removeItem(k));
+    const root = document.querySelector('app-root') as HTMLElement | null;
+    if (root) { root.style.removeProperty('--c-ink'); root.style.removeProperty('--c-accent'); root.style.removeProperty('--c-paper'); }
+    this.toast('info', 'Theme par défaut restauré');
+  }
+
+  // Users
+  openNewUser() {
+    const email = window.prompt('Email du nouveau membre :');
+    if (!email) return;
+    const role = window.prompt('Rôle (admin/manager/staff/housekeeping) :', 'staff');
+    if (!role) return;
+    this.teamUsers.update((list) => [...list, { firstName: email.split('@')[0], lastName: '', email, role, active: true, lastLogin: 'jamais' }]);
+    this.toast('success', `Invitation envoyée à ${email}`);
+  }
+
+  // Experiments
+  openNewExperiment() {
+    const name = window.prompt('Nom de l\'expérience :');
+    if (!name) return;
+    const hypothesis = window.prompt('Hypothèse :') || '';
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24);
+    this.experiments.update((list) => [...list, {
+      id, name, status: 'draft', hypothesis,
+      variants: [{ label: 'A', completionRate: 0, sample: 0, nps: 0 }, { label: 'B', completionRate: 0, sample: 0, nps: 0 }],
+    }]);
+    this.toast('success', `Expérience "${name}" créée — démarrez quand prêt`);
+  }
+
+  // Schedules
+  toggleSchedule(id: string) {
+    this.schedules.update((list) => list.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s));
+  }
+  addSchedule() {
+    const title = window.prompt('Titre du push :');
+    if (!title) return;
+    const message = window.prompt('Message :') || '';
+    const cron = window.prompt('Cron (ex. 0 12 * * *) :', '0 12 * * *') || '0 12 * * *';
+    this.schedules.update((list) => [...list, { id: String(Date.now()), title, message, cron, enabled: true }]);
+    this.toast('success', 'Push planifié créé');
+  }
+
+  // Reporting
+  generateWeeklyReport() {
+    const data = {
+      tenant: this.user()?.tenantId,
+      week: new Date().toISOString().slice(0, 10),
+      revenue: this.totalRevenue(),
+      orders: this.orders().length,
+      nps: this.npsBands().score,
+      satisfaction: this.stats()?.averageScore,
+      topItems: this.topItems().slice(0, 3).map((it) => `${it.name} (${it.count}×)`).join(' · '),
+      alerts: this.roomAlerts().slice(0, 3).map((a) => `Ch.${a.room} — ${a.reason}`).join(' / '),
+      generatedAt: new Date().toISOString(),
+    };
+    const html = this.buildReportHtml(data);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if (w) setTimeout(() => w.print(), 500);
+    this.toast('success', this.reportEmail ? `Rapport généré et envoyé à ${this.reportEmail}` : 'Rapport généré — ouverture pour impression PDF');
+  }
+  private buildReportHtml(d: any): string {
+    return `<!doctype html><html><head><meta charset="utf-8"><title>Rapport ${d.week}</title>
+<style>
+@page { size: A4; margin: 18mm; }
+body { font-family: 'Inter', -apple-system, sans-serif; color: #14202e; max-width: 720px; margin: 0 auto; padding: 24px; }
+h1 { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 500; letter-spacing: -0.02em; margin: 0; }
+.eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #8e7138; }
+.kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+.kpi__cell { padding: 16px; border: 1px solid rgba(20,32,46,0.08); }
+.kpi__num { font-family: 'Cormorant Garamond', serif; font-size: 32px; line-height: 1; }
+hr { border: 0; height: 1px; background: rgba(20,32,46,0.08); margin: 24px 0; }
+</style></head><body>
+<header><span class="eyebrow">Rapport hebdomadaire · ${d.tenant}</span><h1>Semaine du ${d.week}</h1></header>
+<hr>
+<div class="kpi">
+  <div class="kpi__cell"><span class="eyebrow">Chiffre d'affaires</span><div class="kpi__num">${d.revenue.toFixed(0)} €</div></div>
+  <div class="kpi__cell"><span class="eyebrow">Commandes</span><div class="kpi__num">${d.orders}</div></div>
+  <div class="kpi__cell"><span class="eyebrow">NPS</span><div class="kpi__num">${d.nps}</div></div>
+  <div class="kpi__cell"><span class="eyebrow">Satisfaction</span><div class="kpi__num">${(d.satisfaction || 0).toFixed(1)} / 4</div></div>
+</div>
+<hr>
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:22px">Top plats</h2>
+<p>${d.topItems || '—'}</p>
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:22px">Alertes opérationnelles</h2>
+<p>${d.alerts || 'Aucune alerte cette semaine.'}</p>
+<hr>
+<footer style="font-size:11px;color:#5a6675">Concierge · Rapport généré le ${new Date(d.generatedAt).toLocaleString('fr-FR')}</footer>
+</body></html>`;
+  }
+
+  // Email templates
+  saveTemplate(t: any) {
+    localStorage.setItem('email_tpl_' + t.id, t.body);
+    this.toast('success', `Template "${t.name}" enregistré`);
+  }
+
+  // Import CSV
+  importMenuCSV(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? '');
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const [header, ...rows] = lines;
+      const cols = header.split(';');
+      const tid = this.user()?.tenantId;
+      let count = 0;
+      for (const row of rows) {
+        const values = row.split(';');
+        const obj: any = {};
+        cols.forEach((c, i) => obj[c.trim()] = values[i]?.trim());
+        const payload = {
+          name: { fr: obj.name },
+          category: obj.category || 'food',
+          price: parseFloat(obj.price) || 0,
+          preparationMinutes: parseInt(obj.preparationMinutes) || 15,
+          available: obj.available !== 'false',
+          image: obj.image || '',
+          currency: 'EUR',
+        };
+        this.http.post(`${API}/orders/menu?tenantId=${tid}`, payload, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe();
+        count++;
+      }
+      this.toast('success', `${count} articles importés depuis ${file.name}`);
+      setTimeout(() => this.loadMenu(), 800);
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+  importPoisCSV(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? '');
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const [header, ...rows] = lines;
+      const cols = header.split(';');
+      const tid = this.user()?.tenantId;
+      let count = 0;
+      for (const row of rows) {
+        const values = row.split(';');
+        const obj: any = {};
+        cols.forEach((c, i) => obj[c.trim()] = values[i]?.trim());
+        const payload: any = {
+          name: { fr: obj.name },
+          category: obj.category || 'restaurant',
+          lat: parseFloat(obj.lat) || 45.7578,
+          lng: parseFloat(obj.lng) || 4.832,
+          rating: obj.rating ? parseFloat(obj.rating) : null,
+          hours: obj.hours || '',
+          phone: obj.phone || '',
+        };
+        this.http.post(`${API}/content/pois?tenantId=${tid}`, payload, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe();
+        count++;
+      }
+      this.toast('success', `${count} adresses importées depuis ${file.name}`);
+      setTimeout(() => this.loadPois(), 800);
+    };
+    reader.readAsText(file);
+    input.value = '';
   }
 
   // Dark mode + notifications

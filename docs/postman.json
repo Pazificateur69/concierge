@@ -1,0 +1,100 @@
+{
+  "info": {
+    "_postman_id": "concierge-api-v4",
+    "name": "Concierge — API Gateway",
+    "description": "Collection Postman pour démontrer les endpoints publics et authentifiés. Définissez la variable {{baseUrl}} (ex. https://concierge-api-gateway.onrender.com) puis exécutez les requêtes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://concierge-api-gateway.onrender.com" },
+    { "key": "tenantId", "value": "" },
+    { "key": "tenantSlug", "value": "royal-lyon" },
+    { "key": "accessToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health & docs",
+      "item": [
+        { "name": "Gateway healthz", "request": { "method": "GET", "url": "{{baseUrl}}/healthz" } },
+        { "name": "Swagger UI", "request": { "method": "GET", "url": "{{baseUrl}}/api/docs" } }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        { "name": "Tenant directory", "request": { "method": "GET", "url": "{{baseUrl}}/tenants/directory" } },
+        { "name": "Tenant by slug", "request": { "method": "GET", "url": "{{baseUrl}}/tenants/{{tenantSlug}}" } },
+        { "name": "Public stats", "request": { "method": "GET", "url": "{{baseUrl}}/orders/public-stats" } },
+        { "name": "POIs (search)", "request": { "method": "GET", "url": "{{baseUrl}}/content/pois?tenantId={{tenantId}}&q=bocuse" } },
+        { "name": "Menu", "request": { "method": "GET", "url": "{{baseUrl}}/orders/menu?tenantId={{tenantId}}" } }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST", "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "content-type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@royal-lyon.fr\",\n  \"password\": \"Demo2026!\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST", "url": "{{baseUrl}}/auth/refresh",
+            "header": [{ "key": "content-type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"<paste>\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders (auth)",
+      "item": [
+        {
+          "name": "Create order (kiosk public)",
+          "request": {
+            "method": "POST", "url": "{{baseUrl}}/orders",
+            "header": [{ "key": "content-type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"room\": \"204\",\n  \"items\": [{ \"menuItemId\": \"<id>\", \"quantity\": 2 }],\n  \"source\": \"kiosk\",\n  \"locale\": \"fr\"\n}" }
+          }
+        },
+        {
+          "name": "List orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Update status",
+          "request": {
+            "method": "PATCH", "url": "{{baseUrl}}/orders/<id>/status",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "content-type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"accepted\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Surveys",
+      "item": [
+        { "name": "Get survey by slug", "request": { "method": "GET", "url": "{{baseUrl}}/surveys/satisfaction-checkout?tenantId={{tenantId}}" } },
+        {
+          "name": "Submit response",
+          "request": {
+            "method": "POST", "url": "{{baseUrl}}/surveys/satisfaction-checkout/responses?tenantId={{tenantId}}",
+            "header": [{ "key": "content-type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"answers\": [{ \"questionId\": \"q1\", \"value\": 4 }],\n  \"locale\": \"fr\"\n}" }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -11,9 +11,9 @@ export class PoisController {
   constructor(private readonly poisService: PoisService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List points of interest for a tenant' })
-  list(@Query('tenantId') tenantId: string, @Query('category') category?: PoiCategory) {
-    return this.poisService.list(tenantId, category);
+  @ApiOperation({ summary: 'List points of interest for a tenant. Optional ?q= for full-text search across name + description.' })
+  list(@Query('tenantId') tenantId: string, @Query('category') category?: PoiCategory, @Query('q') q?: string) {
+    return this.poisService.list(tenantId, category, q);
   }
 
   @Post()

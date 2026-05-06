@@ -8,11 +8,24 @@ import type { Poi, PoiCategory } from '@concierge/types';
 export class PoisService {
   constructor(@InjectModel(PoiEntity.name) private readonly model: Model<PoiDocument>) {}
 
-  async list(tenantId: string, category?: PoiCategory): Promise<Poi[]> {
+  async list(tenantId: string, category?: PoiCategory, q?: string): Promise<Poi[]> {
     const filter: any = { tenantId };
     if (category) filter.category = category;
+    if (q && q.trim()) {
+      const re = new RegExp(q.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
+      filter.$or = [
+        { 'name.fr': re }, { 'name.en': re },
+        { 'description.fr': re }, { 'description.en': re },
+      ];
+    }
     const items = await this.model.find(filter).sort({ category: 1 });
     return items.map((p) => this.toDto(p));
+  }
+
+  async softDelete(tenantId: string, id: string): Promise<{ ok: true }> {
+    const updated = await this.model.findOneAndUpdate({ _id: id, tenantId }, { $set: { deletedAt: new Date() } }, { new: true });
+    if (!updated) throw new NotFoundException(`POI ${id} not found`);
+    return { ok: true };
   }
 
   async create(tenantId: string, payload: Partial<PoiEntity>): Promise<Poi> {

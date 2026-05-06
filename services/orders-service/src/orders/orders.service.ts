@@ -6,6 +6,7 @@ import { MenuItemEntity, MenuItemDocument } from '../menu/menu-item.schema';
 import type { Order, OrderStatus } from '@concierge/types';
 import { CreateOrderDto, UpdateOrderStatusDto } from './orders.dto';
 import { OrdersGateway } from './orders.gateway';
+import { WebhooksService } from './webhooks.service';
 
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending: ['accepted', 'cancelled'],
@@ -21,6 +22,7 @@ export class OrdersService {
     @InjectModel(OrderEntity.name) private readonly orderModel: Model<OrderDocument>,
     @InjectModel(MenuItemEntity.name) private readonly menuModel: Model<MenuItemDocument>,
     private readonly gateway: OrdersGateway,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   async list(tenantId: string, status?: OrderStatus, room?: string): Promise<Order[]> {
@@ -93,6 +95,7 @@ export class OrdersService {
 
     const dtoOut = this.toDto(order);
     this.gateway.emitNewOrder(dtoOut);
+    this.webhooks.fire('order.created', dtoOut);
     return dtoOut;
   }
 
@@ -110,6 +113,8 @@ export class OrdersService {
 
     const dtoOut = this.toDto(order);
     this.gateway.emitOrderUpdated(dtoOut);
+    const eventName = dto.status === 'delivered' ? 'order.delivered' : dto.status === 'cancelled' ? 'order.cancelled' : 'order.updated';
+    this.webhooks.fire(eventName, dtoOut);
     return dtoOut;
   }
 

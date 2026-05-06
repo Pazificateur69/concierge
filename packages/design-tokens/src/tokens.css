@@ -1,0 +1,53 @@
+/* Concierge design tokens — pure CSS variables. */
+:root {
+  --c-ink: #14202e;
+  --c-paper: #f5f0e8;
+  --c-paper-soft: #ede5d6;
+  --c-bg: #faf7f2;
+  --c-bg-card: #ffffff;
+  --c-accent: #b8985a;
+  --c-accent-deep: #8e7138;
+  --c-accent-soft: #d6bd87;
+  --c-success: #36644a;
+  --c-warning: #95701a;
+  --c-danger: #913528;
+  --c-text: #14202e;
+  --c-text-muted: #5a6675;
+  --c-text-soft: #97a0ad;
+  --c-text-faint: #b9c0c9;
+  --c-border: rgba(20,32,46,0.08);
+  --c-border-strong: rgba(20,32,46,0.18);
+
+  --c-font-display: 'Cormorant Garamond', Georgia, serif;
+  --c-font-body: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --c-font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+
+  --r-sm: 2px; --r-md: 4px; --r-lg: 8px; --r-xl: 12px; --r-full: 999px;
+
+  --sh-xs: 0 1px 2px rgba(20,32,46,0.04);
+  --sh-sm: 0 2px 4px rgba(20,32,46,0.06);
+  --sh-md: 0 4px 12px rgba(20,32,46,0.08);
+  --sh-lg: 0 12px 32px rgba(20,32,46,0.12);
+  --sh-xl: 0 24px 64px rgba(20,32,46,0.18);
+
+  --dur-fast: 0.15s; --dur-base: 0.25s; --dur-slow: 0.45s;
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] {
+  --c-ink: #f5f0e8;
+  --c-paper: #1c2a3b;
+  --c-paper-soft: #243349;
+  --c-bg: #0e1722;
+  --c-bg-card: #1a2536;
+  --c-text: #ede5d6;
+  --c-text-muted: #97a0ad;
+  --c-text-soft: #6c7787;
+  --c-text-faint: #4a5567;
+  --c-border: rgba(245,240,232,0.08);
+  --c-border-strong: rgba(245,240,232,0.18);
+}

@@ -6,6 +6,7 @@ import { OrdersGateway } from './orders.gateway';
 import { OrderEntity, OrderSchema } from './order.schema';
 import { MenuItemEntity, MenuItemSchema } from '../menu/menu-item.schema';
 import { JwtStrategy } from '../jwt.strategy';
+import { WebhooksService } from './webhooks.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { JwtStrategy } from '../jwt.strategy';
     ]),
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, OrdersGateway, JwtStrategy],
-  exports: [OrdersService],
+  providers: [OrdersService, OrdersGateway, JwtStrategy, WebhooksService],
+  exports: [OrdersService, WebhooksService],
 })
 export class OrdersModule {}
