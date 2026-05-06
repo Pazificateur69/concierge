@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#14202e" />
+<title>Concierge — Plateforme tactile hôtelière</title>
+<meta name="description" content="Écosystème tactile unifié pour l'hôtellerie d'exception. Inspiré de Dymension." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --c-ink: #14202e;
+    --c-paper: #f5f0e8;
+    --c-paper-soft: #ede5d6;
+    --c-paper-deep: #e3d8c2;
+    --c-bg: #faf7f2;
+    --c-bg-card: #ffffff;
+    --c-text: #14202e;
+    --c-text-muted: #5a6675;
+    --c-text-soft: #97a0ad;
+    --c-text-faint: #b9c0c9;
+    --c-accent: #b8985a;
+    --c-accent-soft: #d6bd87;
+    --c-accent-deep: #8e7138;
+    --c-border: rgba(20, 32, 46, 0.08);
+    --c-border-strong: rgba(20, 32, 46, 0.18);
+    --c-rule: #d8cfbe;
+    --c-success: #36644a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 17px; line-height: 1.55;
+    color: var(--c-text); background: var(--c-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'ss01';
+  }
+  .serif { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; }
+  .italic { font-style: italic; }
+  .mono { font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace; }
+  .eyebrow {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--c-accent-deep);
+  }
+  ::selection { background: var(--c-accent); color: white; }
+
+  /* HERO */
+  .hero {
+    position: relative; min-height: 92vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .hero__bg {
+    position: absolute; inset: 0; z-index: 0;
+    background-image: url('https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=2000&q=85');
+    background-size: cover; background-position: center;
+    transform: scale(1.02);
+  }
+  .hero__overlay {
+    position: absolute; inset: 0; z-index: 1;
+    background:
+      linear-gradient(180deg, rgba(10,14,20,0.20) 0%, rgba(10,14,20,0.65) 50%, rgba(10,14,20,0.92) 100%),
+      radial-gradient(ellipse at 50% 90%, rgba(184,152,90,0.10) 0%, transparent 60%);
+  }
+
+  .topbar {
+    position: relative; z-index: 2;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 28px 48px;
+    color: white;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand__mark {
+    width: 48px; height: 48px;
+    background: white; color: var(--c-ink);
+    display: grid; place-items: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px; font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .brand__text { display: flex; flex-direction: column; line-height: 1.05; }
+  .brand__eye { font-size: 9px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; opacity: 0.65; }
+  .brand__name { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 500; margin-top: 4px; }
+
+  .top-meta { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+  .top-status {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    background: rgba(245, 240, 232, 0.10);
+    border: 1px solid rgba(245, 240, 232, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .top-status__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-success); animation: pulse 2.5s ease-in-out infinite; box-shadow: 0 0 0 0 currentColor; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(54,100,74,0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(54,100,74,0); }
+  }
+  .top-status__text { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
+
+  .hero__content {
+    position: relative; z-index: 2; flex: 1;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 96px;
+    max-width: 1320px; margin: 0 auto; width: 100%;
+    color: white;
+  }
+
+  .hero__chip {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 4px 14px;
+    background: rgba(184, 152, 90, 0.20);
+    border: 1px solid rgba(184, 152, 90, 0.45);
+    border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.20em; text-transform: uppercase;
+    margin-bottom: 28px;
+    width: fit-content;
+    backdrop-filter: blur(10px);
+  }
+  .hero__chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-accent-soft); }
+
+  .hero__title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(56px, 9vw, 156px);
+    line-height: 0.92; letter-spacing: -0.035em;
+    margin: 0; font-weight: 500;
+  }
+  .hero__title em {
+    color: var(--c-accent-soft);
+    font-style: italic; font-weight: 500;
+    display: block;
+  }
+
+  .hero__rule { width: 96px; height: 1px; background: var(--c-accent); border: 0; margin: 32px 0; }
+
+  .hero__lede {
+    font-size: clamp(17px, 1.5vw, 19px);
+    line-height: 1.6; max-width: 640px;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+    font-weight: 300;
+  }
+  .hero__lede strong { font-weight: 500; color: white; }
+
+  .hero__bottom {
+    position: relative; z-index: 2;
+    padding: 0 96px 48px;
+    max-width: 1320px; margin: 0 auto; width: 100%;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    font-weight: 600;
+  }
+  .hero__bottom-left { display: flex; gap: 32px; align-items: center; }
+  .hero__bottom-meta strong { color: white; font-weight: 600; }
+  .hero__scroll-line {
+    width: 1px; height: 56px;
+    background: linear-gradient(180deg, transparent, var(--c-accent-soft));
+    margin-left: auto;
+  }
+
+  /* INTRO */
+  .intro {
+    padding: 96px 48px;
+    max-width: 1080px; margin: 0 auto;
+    text-align: center;
+  }
+  .intro__title {
+    font-size: clamp(32px, 4vw, 48px);
+    line-height: 1.2; margin: 12px 0 24px;
+    font-weight: 500; color: var(--c-ink);
+    letter-spacing: -0.02em;
+  }
+  .intro__title em { color: var(--c-accent-deep); font-style: italic; }
+  .intro__lede {
+    font-size: 17px; line-height: 1.65;
+    color: var(--c-text-muted);
+    max-width: 680px; margin: 0 auto;
+  }
+
+  /* APPS GRID */
+  .apps {
+    padding: 64px 48px 96px;
+    max-width: 1320px; margin: 0 auto;
+  }
+  .apps__head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--c-border);
+  }
+  .apps__head h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(28px, 3.5vw, 40px);
+    margin: 8px 0 0; font-weight: 500;
+    color: var(--c-ink); letter-spacing: -0.02em;
+  }
+  .apps__head h2 em { color: var(--c-accent-deep); font-style: italic; }
+  .apps__count { font-size: 14px; color: var(--c-text-soft); }
+
+  .apps__grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .app-card {
+    position: relative;
+    background: var(--c-bg-card);
+    border: 1px solid var(--c-border);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    display: flex; flex-direction: column;
+    transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+    aspect-ratio: 4 / 3;
+  }
+  .app-card:hover {
+    border-color: var(--c-ink);
+    transform: translateY(-4px);
+    box-shadow: 0 24px 56px rgba(20, 32, 46, 0.12);
+  }
+  .app-card__visual {
+    position: relative; flex: 1; overflow: hidden;
+    display: grid; place-items: center;
+  }
+  .app-card__visual::before {
+    content: ''; position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .app-card:hover .app-card__visual::before { transform: scale(1.04); }
+
+  .app-card[data-app="lobby"] .app-card__visual::before { background-image: url('https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200&q=85'); }
+  .app-card[data-app="smiley"] .app-card__visual::before { background-image: url('https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1200&q=85'); }
+  .app-card[data-app="admin"] .app-card__visual::before { background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=85'); }
+  .app-card[data-app="reception"] .app-card__visual::before { background-image: url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&q=85'); }
+
+  .app-card__visual::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(10,14,20,0.10) 0%, rgba(10,14,20,0.60) 100%);
+  }
+
+  .app-card__num {
+    position: absolute; top: 24px; left: 24px; z-index: 1;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px; font-weight: 500;
+    color: white; opacity: 0.9;
+    letter-spacing: -0.02em;
+  }
+  .app-card__num::before {
+    content: '';
+    display: inline-block;
+    width: 24px; height: 1px;
+    background: var(--c-accent-soft);
+    vertical-align: middle;
+    margin-right: 12px;
+  }
+
+  .app-card__status {
+    position: absolute; top: 28px; right: 24px; z-index: 1;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: white;
+  }
+  .app-card__status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c-success); box-shadow: 0 0 0 2px rgba(54,100,74,0.3);
+  }
+
+  .app-card__body {
+    padding: 28px 32px 32px;
+    border-top: 1px solid var(--c-border);
+    background: var(--c-bg-card);
+  }
+  .app-card__title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px; line-height: 1.1;
+    margin: 4px 0 6px;
+    color: var(--c-ink); font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .app-card__title em { color: var(--c-accent-deep); font-style: italic; }
+  .app-card__role { font-size: 13px; color: var(--c-text-muted); margin: 0 0 16px; }
+  .app-card__meta {
+    display: flex; gap: 16px; align-items: center; margin-top: 16px;
+    padding-top: 16px; border-top: 1px solid var(--c-border);
+  }
+  .app-card__tech { font-size: 11px; color: var(--c-text-soft); letter-spacing: 0.06em; flex: 1; }
+  .app-card__cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.20em; text-transform: uppercase;
+    color: var(--c-ink);
+    transition: gap 0.3s;
+  }
+  .app-card:hover .app-card__cta { gap: 14px; color: var(--c-accent-deep); }
+  .app-card__cta svg { transition: transform 0.3s; }
+  .app-card:hover .app-card__cta svg { transform: translateX(4px); }
+
+  /* FACT BAND */
+  .facts {
+    padding: 96px 48px;
+    background: var(--c-paper);
+    border-top: 1px solid var(--c-rule);
+    border-bottom: 1px solid var(--c-rule);
+  }
+  .facts__inner {
+    max-width: 1320px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--c-border);
+  }
+  .fact {
+    padding: 32px;
+    background: var(--c-bg-card);
+    border-right: 1px solid var(--c-border);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .fact:last-child { border-right: none; }
+  .fact__num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(40px, 4vw, 56px);
+    font-weight: 500; color: var(--c-ink);
+    line-height: 1; letter-spacing: -0.025em;
+    font-feature-settings: 'tnum';
+  }
+  .fact__num em { color: var(--c-accent-deep); font-style: italic; }
+  .fact__label { font-size: 14px; color: var(--c-text-muted); margin-top: 4px; }
+
+  /* RESOURCES */
+  .resources {
+    padding: 96px 48px;
+    max-width: 1320px; margin: 0 auto;
+  }
+  .resources__head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 40px; padding-bottom: 24px;
+    border-bottom: 1px solid var(--c-border);
+  }
+  .resources__head h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(28px, 3.5vw, 40px);
+    margin: 8px 0 0; font-weight: 500;
+    color: var(--c-ink); letter-spacing: -0.02em;
+  }
+
+  .resources__grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+    border: 1px solid var(--c-border);
+  }
+  .resource {
+    padding: 32px;
+    background: var(--c-bg-card);
+    border-right: 1px solid var(--c-border);
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 12px;
+    transition: background 0.2s;
+  }
+  .resource:last-child { border-right: none; }
+  .resource:hover { background: var(--c-paper-soft); }
+  .resource__icon {
+    width: 36px; height: 36px;
+    background: var(--c-ink); color: var(--c-paper);
+    display: grid; place-items: center;
+  }
+  .resource__title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 500; margin: 4px 0 0; color: var(--c-ink); letter-spacing: -0.01em; }
+  .resource__desc { font-size: 13px; color: var(--c-text-muted); margin: 0 0 12px; line-height: 1.5; }
+  .resource__cta {
+    margin-top: auto; padding-top: 16px;
+    border-top: 1px solid var(--c-border);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--c-accent-deep);
+  }
+
+  /* DEMO ACCOUNTS */
+  .demo {
+    padding: 64px 48px 96px;
+    max-width: 1320px; margin: 0 auto;
+  }
+  .demo__inner {
+    background: var(--c-ink); color: var(--c-paper);
+    padding: 64px 48px;
+    display: grid; grid-template-columns: 1fr 1.4fr; gap: 56px;
+  }
+  .demo__intro h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(28px, 3vw, 40px);
+    margin: 12px 0 16px; font-weight: 500;
+    line-height: 1.15; letter-spacing: -0.02em; color: white;
+  }
+  .demo__intro h2 em { color: var(--c-accent-soft); font-style: italic; }
+  .demo__intro .eyebrow { color: var(--c-accent-soft); }
+  .demo__intro p { font-size: 15px; color: rgba(245,240,232,0.7); margin: 0; line-height: 1.65; }
+
+  .demo__accounts { display: flex; flex-direction: column; gap: 0; border: 1px solid rgba(245,240,232,0.15); }
+  .acc {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(245,240,232,0.15);
+  }
+  .acc:last-child { border-bottom: none; }
+  .acc__role { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c-accent-soft); }
+  .acc__email { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: white; }
+  .acc__pass { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: rgba(245,240,232,0.7); }
+
+  /* COLOPHON */
+  .colophon {
+    padding: 56px 48px 32px;
+    background: var(--c-ink);
+    color: rgba(245,240,232,0.7);
+    font-size: 12px;
+  }
+  .colophon__row {
+    max-width: 1320px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 48px; padding-bottom: 32px;
+    border-bottom: 1px solid rgba(245,240,232,0.15);
+  }
+  .colophon__brand { display: flex; align-items: flex-start; gap: 16px; }
+  .colophon__brand-text { display: flex; flex-direction: column; gap: 4px; }
+  .colophon__brand-mark { background: var(--c-paper); color: var(--c-ink); width: 44px; height: 44px; display: grid; place-items: center; font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; flex-shrink: 0; }
+  .colophon__brand-name { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 500; color: white; }
+  .colophon__brand p { margin: 4px 0 0; line-height: 1.6; max-width: 240px; font-size: 13px; }
+
+  .colophon__col { display: flex; flex-direction: column; gap: 8px; }
+  .colophon__col .eyebrow { color: var(--c-accent-soft); font-size: 10px; margin-bottom: 4px; }
+  .colophon__col a {
+    color: rgba(245,240,232,0.75);
+    text-decoration: none;
+    transition: color 0.15s;
+    font-size: 13px;
+  }
+  .colophon__col a:hover { color: white; }
+
+  .colophon__bottom {
+    max-width: 1320px; margin: 24px auto 0;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .colophon__bottom-right { letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .hero__content, .hero__bottom { padding-left: 32px; padding-right: 32px; }
+    .topbar { padding: 20px 32px; }
+    .apps__grid { grid-template-columns: 1fr; }
+    .facts__inner { grid-template-columns: 1fr 1fr; }
+    .fact:nth-child(2) { border-right: none; }
+    .resources__grid { grid-template-columns: 1fr; }
+    .resource { border-right: none; border-bottom: 1px solid var(--c-border); }
+    .demo__inner { grid-template-columns: 1fr; padding: 32px 24px; gap: 32px; }
+    .colophon__row { grid-template-columns: 1fr; gap: 24px; }
+    .colophon__bottom { flex-direction: column; gap: 8px; text-align: center; }
+    .acc { grid-template-columns: 1fr; gap: 4px; padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero__bg"></div>
+  <div class="hero__overlay"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__mark">C</div>
+      <div class="brand__text">
+        <span class="brand__eye">Concierge</span>
+        <span class="brand__name">Plateforme tactile hôtelière</span>
+      </div>
+    </div>
+    <div class="top-meta">
+      <div class="top-status">
+        <span class="top-status__dot"></span>
+        <span class="top-status__text">Live · production</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="hero__content">
+    <span class="hero__chip">
+      <span class="hero__chip-dot"></span>
+      Démo · Candidature alternance Dymension
+    </span>
+    <h1 class="hero__title">
+      Concierge<br/>
+      <em>by Dymension</em>
+    </h1>
+    <hr class="hero__rule" />
+    <p class="hero__lede">
+      Un écosystème tactile pensé pour les hôtels d'exception.
+      Quatre touchpoints unifiés autour d'une seule architecture <strong>microservices multi-tenant</strong>,
+      inspirée de votre offre actuelle (KioskInfo, Delyss, Expressyon).
+    </p>
+  </div>
+
+  <div class="hero__bottom">
+    <div class="hero__bottom-left">
+      <span class="hero__bottom-meta">5&thinsp;<strong>microservices</strong></span>
+      <span class="hero__bottom-meta">4&thinsp;<strong>frontends</strong></span>
+      <span class="hero__bottom-meta">2&thinsp;<strong>hôtels seedés</strong></span>
+    </div>
+    <div class="hero__scroll-line"></div>
+  </div>
+</section>
+
+<!-- INTRO -->
+<section class="intro">
+  <span class="eyebrow">Le projet</span>
+  <h2 class="intro__title">
+    Une seule architecture, <em>quatre expériences</em>
+  </h2>
+  <p class="intro__lede">
+    Plutôt que de proposer des bornes séparées (lobby, satisfaction, room service),
+    Concierge fédère ces touchpoints autour d'un backend NestJS unifié, d'une base MongoDB Atlas multi-tenant,
+    et d'un déploiement live sur Render et Vercel.
+  </p>
+</section>
+
+<!-- APPS GRID -->
+<section class="apps">
+  <header class="apps__head">
+    <div>
+      <span class="eyebrow">Les quatre touchpoints</span>
+      <h2>Accédez à <em>l'expérience complète</em></h2>
+    </div>
+    <span class="apps__count">04 applications · 02 hôtels</span>
+  </header>
+
+  <div class="apps__grid">
+    <a class="app-card" data-app="lobby" href="https://concierge-lobby.vercel.app/?tenant=royal-lyon" target="_blank" rel="noopener">
+      <div class="app-card__visual">
+        <span class="app-card__num">01</span>
+        <span class="app-card__status">
+          <span class="app-card__status-dot"></span> Live
+        </span>
+      </div>
+      <div class="app-card__body">
+        <span class="eyebrow">Borne tactile lobby</span>
+        <h3 class="app-card__title"><em>Lobby</em> Royal Lyon</h3>
+        <p class="app-card__role">Concierge digital — carte locale, services, room&nbsp;service, spa, activités.</p>
+        <div class="app-card__meta">
+          <span class="app-card__tech">Vue 3 · Ionic · Leaflet · PWA</span>
+          <span class="app-card__cta">
+            Ouvrir
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </div>
+    </a>
+
+    <a class="app-card" data-app="smiley" href="https://concierge-smiley.vercel.app" target="_blank" rel="noopener">
+      <div class="app-card__visual">
+        <span class="app-card__num">02</span>
+        <span class="app-card__status">
+          <span class="app-card__status-dot"></span> Live
+        </span>
+      </div>
+      <div class="app-card__body">
+        <span class="eyebrow">Borne satisfaction</span>
+        <h3 class="app-card__title">Sondage <em>Smiley</em></h3>
+        <p class="app-card__role">Évaluation au check-out, smileys SVG expressifs, NPS, multilingue.</p>
+        <div class="app-card__meta">
+          <span class="app-card__tech">Vue 3 · Ionic · Web Speech</span>
+          <span class="app-card__cta">
+            Ouvrir
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </div>
+    </a>
+
+    <a class="app-card" data-app="admin" href="https://concierge-admin-gamma.vercel.app" target="_blank" rel="noopener">
+      <div class="app-card__visual">
+        <span class="app-card__num">03</span>
+        <span class="app-card__status">
+          <span class="app-card__status-dot"></span> Live
+        </span>
+      </div>
+      <div class="app-card__body">
+        <span class="eyebrow">Backoffice directeur</span>
+        <h3 class="app-card__title"><em>Administration</em> Concierge</h3>
+        <p class="app-card__role">KPI, analytics satisfaction, gestion des commandes, suivi des enquêtes.</p>
+        <div class="app-card__meta">
+          <span class="app-card__tech">Angular 17 · Charts SVG</span>
+          <span class="app-card__cta">
+            Ouvrir
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </div>
+    </a>
+
+    <a class="app-card" data-app="reception" href="https://concierge-reception.vercel.app" target="_blank" rel="noopener">
+      <div class="app-card__visual">
+        <span class="app-card__num">04</span>
+        <span class="app-card__status">
+          <span class="app-card__status-dot"></span> Live
+        </span>
+      </div>
+      <div class="app-card__body">
+        <span class="eyebrow">Écran de réception</span>
+        <h3 class="app-card__title">Réception <em>temps réel</em></h3>
+        <p class="app-card__role">Kanban WebSocket, drag &amp; drop, notifications sonores, urgences.</p>
+        <div class="app-card__meta">
+          <span class="app-card__tech">Angular 17 · Socket.io</span>
+          <span class="app-card__cta">
+            Ouvrir
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- FACTS -->
+<section class="facts">
+  <div class="facts__inner">
+    <div class="fact">
+      <span class="eyebrow">Microservices</span>
+      <span class="fact__num">05</span>
+      <span class="fact__label">Auth, Tenant, Content, Orders, Survey</span>
+    </div>
+    <div class="fact">
+      <span class="eyebrow">Frontends</span>
+      <span class="fact__num">04</span>
+      <span class="fact__label">Lobby, Smiley, Admin, Réception</span>
+    </div>
+    <div class="fact">
+      <span class="eyebrow">Langues</span>
+      <span class="fact__num">05</span>
+      <span class="fact__label">FR, EN, DE, ES, JP — multilingue</span>
+    </div>
+    <div class="fact">
+      <span class="eyebrow">Live</span>
+      <span class="fact__num"><em>100%</em></span>
+      <span class="fact__label">Render · Vercel · MongoDB Atlas</span>
+    </div>
+  </div>
+</section>
+
+<!-- RESOURCES -->
+<section class="resources">
+  <header class="resources__head">
+    <div>
+      <span class="eyebrow">Documentation technique</span>
+      <h2>Pour aller <em>plus loin</em></h2>
+    </div>
+  </header>
+
+  <div class="resources__grid">
+    <a class="resource" href="https://concierge-gateway.onrender.com/api/docs" target="_blank" rel="noopener">
+      <div class="resource__icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>
+        </svg>
+      </div>
+      <span class="eyebrow">API · Swagger</span>
+      <h3 class="resource__title">Documentation API</h3>
+      <p class="resource__desc">Référence OpenAPI complète des 5 microservices, exemples curl, schémas DTO.</p>
+      <span class="resource__cta">Ouvrir Swagger →</span>
+    </a>
+
+    <a class="resource" href="https://github.com/Pazificateur69/concierge" target="_blank" rel="noopener">
+      <div class="resource__icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+        </svg>
+      </div>
+      <span class="eyebrow">Code source</span>
+      <h3 class="resource__title">Repository GitHub</h3>
+      <p class="resource__desc">Monorepo pnpm complet · 11 packages · Documentation, ADR, schémas d'architecture.</p>
+      <span class="resource__cta">Voir sur GitHub →</span>
+    </a>
+
+    <a class="resource" href="https://concierge-gateway.onrender.com/health" target="_blank" rel="noopener">
+      <div class="resource__icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <span class="eyebrow">Statut</span>
+      <h3 class="resource__title">Healthcheck en direct</h3>
+      <p class="resource__desc">Endpoint de monitoring du gateway. Prouve que tout tourne en production.</p>
+      <span class="resource__cta">Tester l'API →</span>
+    </a>
+  </div>
+</section>
+
+<!-- DEMO ACCOUNTS -->
+<section class="demo">
+  <div class="demo__inner">
+    <div class="demo__intro">
+      <span class="eyebrow">Comptes de démonstration</span>
+      <h2>Connectez-vous <em>directement</em></h2>
+      <p>L'admin et la réception nécessitent une authentification. Utilisez ces comptes pour explorer toutes les fonctionnalités.</p>
+    </div>
+    <div class="demo__accounts">
+      <div class="acc">
+        <span class="acc__role">Admin · Royal Lyon</span>
+        <span class="acc__email">admin@royal-lyon.fr</span>
+        <span class="acc__pass">Demo2026!</span>
+      </div>
+      <div class="acc">
+        <span class="acc__role">Staff · Royal Lyon</span>
+        <span class="acc__email">staff@royal-lyon.fr</span>
+        <span class="acc__pass">Demo2026!</span>
+      </div>
+      <div class="acc">
+        <span class="acc__role">Admin · Côte d'Azur</span>
+        <span class="acc__email">admin@cote-azur.fr</span>
+        <span class="acc__pass">Demo2026!</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COLOPHON -->
+<footer class="colophon">
+  <div class="colophon__row">
+    <div class="colophon__brand">
+      <div class="colophon__brand-mark">C</div>
+      <div class="colophon__brand-text">
+        <span class="colophon__brand-name">Concierge</span>
+        <p>Une démonstration technique réalisée pour la candidature en alternance Développeur Full Stack chez Dymension.</p>
+      </div>
+    </div>
+
+    <div class="colophon__col">
+      <span class="eyebrow">Touchpoints</span>
+      <a href="https://concierge-lobby.vercel.app/?tenant=royal-lyon" target="_blank" rel="noopener">Lobby</a>
+      <a href="https://concierge-smiley.vercel.app" target="_blank" rel="noopener">Smiley</a>
+      <a href="https://concierge-admin-gamma.vercel.app" target="_blank" rel="noopener">Admin</a>
+      <a href="https://concierge-reception.vercel.app" target="_blank" rel="noopener">Réception</a>
+    </div>
+
+    <div class="colophon__col">
+      <span class="eyebrow">Backend</span>
+      <a href="https://concierge-gateway.onrender.com/api/docs" target="_blank" rel="noopener">Swagger</a>
+      <a href="https://concierge-gateway.onrender.com/health" target="_blank" rel="noopener">Healthcheck</a>
+      <a href="https://github.com/Pazificateur69/concierge" target="_blank" rel="noopener">Code source</a>
+    </div>
+
+    <div class="colophon__col">
+      <span class="eyebrow">Stack</span>
+      <span style="color: rgba(245,240,232,0.7); font-size: 13px;">NestJS · Vue 3 · Angular 17</span>
+      <span style="color: rgba(245,240,232,0.7); font-size: 13px;">MongoDB Atlas</span>
+      <span style="color: rgba(245,240,232,0.7); font-size: 13px;">Render · Vercel</span>
+    </div>
+  </div>
+
+  <div class="colophon__bottom">
+    <span>© 2026 Concierge · Démonstration</span>
+    <span class="colophon__bottom-right">Powered by Dymension</span>
+  </div>
+</footer>
+
+</body>
+</html>
