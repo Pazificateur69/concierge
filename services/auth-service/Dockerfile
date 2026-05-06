@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:25-alpine AS base
 WORKDIR /workspace
 RUN corepack enable && corepack prepare pnpm@9.10.0 --activate
 
