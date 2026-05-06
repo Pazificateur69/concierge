@@ -29,18 +29,58 @@
 
 ---
 
-## ✨ Fonctionnalités clés
+## ✨ Fonctionnalités clés (V4)
 
-- 🎙️ **Mode accessibilité vocale** (Web Speech API) — lit le contenu à voix haute
-- 🌍 **Multi-langues** dynamique (FR/EN/DE/ES/JP)
-- 📡 **PWA offline-first** — les commandes passent même sans wifi
-- 🗺️ **Carte interactive Leaflet** des points d'intérêt autour de l'hôtel
-- ⚡ **WebSocket temps réel** entre tablette client → réception
-- 🏢 **Multi-tenant** — un seul déploiement, N hôtels, branding par hôtel
-- 🎨 **CMS sans-code** pour le directeur (édition WYSIWYG)
-- 📋 **Survey builder dynamique** (smiley/NPS/QCM/texte)
-- 📲 **QR code chambre** → personnalisation auto
-- 🔒 **Mode kiosque sécurisé** (plein écran, gestes désactivés)
+### Côté client (lobby & smiley)
+- **7 langues** dynamiques (FR/EN/DE/ES/IT/ZH/AR) avec **RTL natif** pour l'arabe
+- **PWA offline-first** — les commandes passent même sans wifi (queue localStorage + replay)
+- **Cart store persistant** Pinia + localStorage, survit aux navigations
+- **Mode nuit auto** 22h-7h (luminosité réduite, contraste doux)
+- **Screensaver** 0h-6h (carrousel photos + citations Bocuse)
+- **Idle warning modal** 15s countdown avant retour accueil
+- **404 page** éditoriale
+- **Concierge chat** Sophie : knowledge base FR, time-aware greeting, chips de navigation
+- **Visite virtuelle 360°** Matterport-style (4 scènes, HUD glass-blur)
+- **Météo 7 jours** + suggestions contextuelles d'activités
+- **Carte interactive Leaflet** 31 POIs Lyon (+ 15 Nice via tenant Negresco)
+- **Smiley** : faces SVG animées (bob, blink, smile-grow), conditional logic, multi-survey switcher, modes mural/kiosque/mobile
+
+### Côté staff (réception)
+- **Kanban temps réel** Socket.io (drag-drop entre 4 colonnes)
+- **Confetti** au "delivered" (canvas natif)
+- **Desktop notifications** API + son + bouton SOS (3-beep)
+- **Raccourcis clavier** (1-4 status, /search, p print, ?)
+- **Ticket cuisine 80mm** imprimable
+- **Gantt timeline** par commande avec durée par segment
+- **Plan d'étage SVG** dérivant la position de chaque chambre
+- **Agent stats** persistées (commandes traitées, min moyennes)
+- **Historique 30j** + export CSV
+
+### Côté gestion (admin)
+- **Analytics** 7/30/90j : revenue line chart, donut catégories, top plats, NPS sparkline + bands, **heatmap heure×jour**, sentiment + word cloud, funnel
+- **Recommendation engine** co-occurrence dans le panier
+- **Predictive maintenance** chambres à signaux multiples
+- **Theme builder** live preview (couleurs, logo)
+- **A/B tests** tracker avec variants + significativité
+- **Audit log** typé (auth/mutation/config)
+- **Email templates** éditables avec variables
+- **Push scheduling** cron-style
+- **Import CSV** menu + POIs en masse
+- **PDF report** weekly (CA, NPS, top, alertes)
+- **CRUD POI/menu** + drawer responses analytics
+- **CSV exports** orders/surveys/POIs
+- **Tenant switcher** dropdown topbar
+- **Mode sombre** opt-in
+
+### Côté backend
+- **API Gateway** NestJS + http-proxy-middleware + Helmet + HSTS 1y preload + CORS dynamique + logs JSON
+- **Multi-tenant** par discriminator MongoDB
+- **JWT** 15 min + refresh-token rotation + Throttler 100/min
+- **Webhooks** sortants HMAC-SHA256 sur events order.*
+- **Search** regex Mongo sur POIs (`?q=`)
+- **Soft-delete** sur POIs/menu
+- **Healthz + readyz** sur chaque service
+- **OpenAPI 3.0** Swagger UI agrégé sur `/api/docs`
 
 ---
 
@@ -123,13 +163,11 @@ pnpm dev
 
 ## 📚 Documentation
 
-- 📖 [WHY.md](docs/WHY.md) — Pourquoi ce projet (analyse Dymension)
-- 🏛️ [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Architecture détaillée
-- 🔌 [API.md](docs/API.md) — Référence API
-- 🚢 [DEPLOYMENT.md](docs/DEPLOYMENT.md) — Déploiement Vercel + Render
-- 🤝 [CONTRIBUTING.md](docs/CONTRIBUTING.md) — Conventions de code
-- 🗺️ [ROADMAP.md](docs/ROADMAP.md) — Évolutions prévues
-- 🎨 [DESIGN.md](docs/DESIGN.md) — Choix UI/UX
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — Stack complète + diagramme ASCII + responsabilités par couche
+- [DECISIONS.md](./DECISIONS.md) — 17 ADRs (monorepo, multi-tenant, gateway, JWT, charts, no-AI, webhooks, design tokens, healthz partagé…)
+- [docs/data-model.md](./docs/data-model.md) — Schémas collections MongoDB + DBML pour [dbdiagram.io](https://dbdiagram.io)
+- [docs/postman.json](./docs/postman.json) — Collection Postman complète (health, public, auth, orders, surveys)
+- [docs/demo-script.md](./docs/demo-script.md) — Parcours de démo 3:30 + réponses aux questions probables
 
 ---
 
@@ -146,23 +184,32 @@ pnpm dev
 
 ---
 
-## 🧪 Tests
+## 🧪 Tests & qualité
 
 ```bash
-pnpm test              # Tous les tests
+pnpm test              # Tous les tests unitaires
 pnpm --filter auth-service test     # Tests d'un service
-pnpm --filter lobby-kiosk test:e2e  # E2E Cypress
+cd e2e && pnpm test    # E2E Playwright (chromium + iPhone 13)
 ```
+
+CI/CD via GitHub Actions :
+- `.github/workflows/ci.yml` — lint + build + docker matrix sur chaque PR
+- `.github/workflows/e2e.yml` — Playwright sur staging URLs
+- `.github/workflows/lighthouse.yml` — perf/a11y/SEO budgets ≥ 0.8/0.9
+- `.github/workflows/codeql.yml` — scan sécurité weekly + on-PR
+- `.github/dependabot.yml` — bumps groupés (nest, angular, vue, types, eslint)
+- `.husky/pre-commit` — prettier via lint-staged + type-check shared packages
 
 ---
 
 ## 🛠️ Stack technique
 
-**Backend** : NestJS 10 · MongoDB 7 (Mongoose) · Redis · RabbitMQ · Socket.io · JWT · Swagger
-**Frontends mobile/tactile** : Vue 3 · Ionic 7 · Vite · vue-i18n · Leaflet · PWA Workbox
-**Backoffice & Réception** : Angular 17 · Angular Material · ngx-charts · Socket.io-client
-**Infra** : Docker · docker-compose · GitHub Actions · pnpm workspaces
-**Déploiement** : Vercel (frontends) · Render (backend) · MongoDB Atlas
+**Backend** : NestJS 10 · MongoDB 7 (Mongoose) · Socket.io · JWT + refresh rotation · Helmet + HSTS · Swagger 3.0 · Throttler · Webhooks HMAC-SHA256
+**Frontends mobile/tactile** : Vue 3 · Ionic 7 · Vite · Pinia · vue-i18n (7 langues + RTL) · Leaflet · PWA Workbox
+**Backoffice & Réception** : Angular 17 standalone · Signals · inline-SVG charts · Socket.io-client
+**Packages partagés** : `@concierge/types` · `@concierge/nest-common` (HealthController, guards, middleware) · `@concierge/design-tokens` (couleurs, fonts, spacing)
+**Infra** : Docker · docker-compose · pnpm workspaces · Render (backend) · Vercel (frontends) · MongoDB Atlas
+**DX** : Playwright e2e · GitHub Actions (CI/E2E/Lighthouse/CodeQL/Dependabot) · Husky · lint-staged · Prettier
 
 ---
 

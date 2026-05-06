@@ -146,6 +146,99 @@ Ce document recense les décisions techniques structurantes prises au cours du d
 
 ---
 
+## ADR-012 — Webhooks plutôt qu'event bus
+
+**Contexte.** Pour intégrer un PMS (Mews, Opera) ou notifier Slack à chaque commande, il faut sortir des events.
+
+**Décision.** Service `WebhooksService` simple dans orders-service : registre d'endpoints en mémoire, fire HTTP POST avec signature HMAC-SHA256. Events : `order.created`, `order.updated`, `order.delivered`, `order.cancelled`. Configurable via `WEBHOOK_DEFAULT_URL` env var.
+
+**Conséquences.**
+- + Pattern simple, démontre la sortie d'events sans Kafka/RabbitMQ
+- + Header `x-webhook-signature` permet aux consommateurs de vérifier l'authenticité
+- + Aucune nouvelle dépendance (`fetch` natif Node 18+, `crypto.subtle.sign`)
+- − Pas de retry/DLQ — à porter sur BullMQ + Redis si scale
+- − Endpoints non-persistés (en mémoire) — à passer en DB pour multi-instance
+
+---
+
+## ADR-013 — Design tokens centralisés mais composants dupliqués
+
+**Contexte.** Vue + Angular + HTML statique partagent l'identité visuelle.
+
+**Décision.** Package `@concierge/design-tokens` avec :
+- `index.ts` exportant tokens en TS (consommable par n'importe quel framework)
+- `tokens.css` exposant `--c-*` variables CSS
+- `tokens.scss` (placeholder) pour les apps qui voudraient SCSS
+
+**Mais** : les composants concrets (Button, Modal, Drawer) restent dupliqués entre Angular et Vue. Pas de Storybook.
+
+**Conséquences.**
+- + Cohérence visuelle (mêmes couleurs, mêmes espacements, mêmes ombres) avec une seule source
+- + Mode sombre activable via `[data-theme="dark"]` partout
+- + Theme builder admin écrit directement dans les CSS variables, preview live
+- − Composants UI dupliqués (~ 500 lignes de duplication estimées)
+- − Acceptable au stade actuel (4 frontends, peu d'overlap)
+
+---
+
+## ADR-014 — Charts SVG inline + sentiment keyword-based plutôt que libs externes
+
+**Contexte.** L'analytics admin doit montrer revenue, NPS, heatmap, sentiment, word cloud, funnel, recommendations.
+
+**Décision.** Tout en inline SVG dans templates Angular avec computed signals. Sentiment = liste de mots positifs/négatifs (FR). Recommendations = co-occurrence dans le panier (≥ 25% confiance, ≥ 3 occurrences). Predictive maintenance = agrégation de signaux par chambre (cancelled/late/low).
+
+**Conséquences.**
+- + Zéro dépendance ajoutée (Recharts seul = ~ 90 kB gzip)
+- + Calculs déterministes, démo reproductible
+- + Style 100% cohérent avec le design éditorial
+- − Pas de zoom/pan interactif sur les charts (acceptable à ce stade)
+- − Sentiment limité à FR — extensible mais pas multilingue d'office
+
+---
+
+## ADR-015 — PDF report via window.print plutôt que jsPDF/puppeteer
+
+**Contexte.** Manager veut un rapport hebdo PDF (CA, NPS, top plats, alertes).
+
+**Décision.** Builder HTML avec CSS print + ouverture dans nouvel onglet + `window.print()`. L'utilisateur sauvegarde en PDF via le dialog navigateur.
+
+**Conséquences.**
+- + Zéro dépendance (jsPDF = ~ 350 kB)
+- + Stylisation native CSS, fonts custom incluses
+- + Marche sur tous les browsers
+- − Nécessite l'interaction utilisateur (clic Imprimer)
+- − Pour un envoi auto par email, à porter sur puppeteer/playwright en backend
+
+---
+
+## ADR-016 — Audit log + A/B + scheduling en stub plutôt que persistés
+
+**Contexte.** Démo doit montrer ces features sans avoir à provisionner Redis pour les jobs ni de schema MongoDB pour audit.
+
+**Décision.** Données seedées côté frontend (signaux Angular) avec exemples réalistes. Pour passer en production, il suffit d'ajouter les collections (`audit_log`, `experiments`, `schedules`) et de connecter les signals à des fetches.
+
+**Conséquences.**
+- + Demo paraît production
+- + Délai d'implémentation passé de jours à heures
+- − Pas de persistance entre sessions — à implémenter avant déploiement client réel
+- + Le data model (`docs/data-model.md`) liste déjà les collections cibles
+
+---
+
+## ADR-017 — Healthz partagé via package nest-common
+
+**Contexte.** Render sonde `/healthz` pour vérifier qu'un service est vivant. Plusieurs services en avaient un local, certains aucun.
+
+**Décision.** Un seul `HealthController` exporté depuis `@concierge/nest-common`, importé via `controllers: [HealthController]` dans chaque `app.module.ts`. Render `healthCheckPath` configuré par service (`/healthz`, `/auth/healthz`, `/tenants/healthz`, etc. selon le `setGlobalPrefix`).
+
+**Conséquences.**
+- + DRY : changer le format de réponse healthz se fait à un seul endroit
+- + Memory + uptime + version exposés uniformément
+- + auth-service et content-service avaient déjà des HealthController locaux — laissés en place pour ne rien casser
+- + Render redéploie sereinement (healthz toujours répondant en < 1 ms)
+
+---
+
 ## ADR-011 — Seed dataset éditorial vs random faker
 
 **Contexte.** Besoin de données qui paraissent crédibles en démo.

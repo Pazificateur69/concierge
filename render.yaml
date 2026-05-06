@@ -34,7 +34,7 @@ services:
         - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter api-gateway build
     startCommand: cd apps/api-gateway && node dist/main.js
-    healthCheckPath: /health
+    healthCheckPath: /healthz
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
@@ -67,7 +67,7 @@ services:
         - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter auth-service build
     startCommand: cd services/auth-service && node dist/main.js
-    healthCheckPath: /auth/health
+    healthCheckPath: /auth/healthz
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
@@ -90,6 +90,7 @@ services:
         - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter tenant-service build
     startCommand: cd services/tenant-service && node dist/main.js
+    healthCheckPath: /tenants/healthz
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
@@ -112,6 +113,7 @@ services:
         - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter content-service build
     startCommand: cd services/content-service && node dist/main.js
+    healthCheckPath: /content/healthz
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
@@ -134,6 +136,7 @@ services:
         - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter orders-service build
     startCommand: cd services/orders-service && node dist/main.js
+    healthCheckPath: /orders/healthz
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
@@ -156,6 +159,7 @@ services:
         - pnpm-workspace.yaml
     buildCommand: npm install -g pnpm@9.10.0 --force && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm --filter @concierge/types build && pnpm --filter @concierge/nest-common build && pnpm --filter survey-service build
     startCommand: cd services/survey-service && node dist/main.js
+    healthCheckPath: /surveys/healthz
     envVars:
       - fromGroup: concierge-shared
       - key: PORT
