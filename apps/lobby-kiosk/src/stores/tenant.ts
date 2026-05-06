@@ -15,23 +15,9 @@ export const useTenantStore = defineStore('tenant', () => {
       const { data } = await api.get<PublicTenant>(`/tenants/${slug}`);
       tenant.value = data;
     } catch (e: any) {
-      error.value = e?.message ?? 'Failed to load tenant';
-      tenant.value = {
-        id: 'fallback',
-        slug,
-        name: 'Demo Hotel',
-        theme: {
-          primaryColor: '#1a4d8c',
-          accentColor: '#d4a85a',
-          bgColor: '#fafaf7',
-          textColor: '#1a1d24',
-          logoUrl: 'https://placehold.co/200x80/1a4d8c/d4a85a?text=DEMO',
-          font: 'Playfair Display',
-        },
-        locales: ['fr', 'en', 'de', 'es', 'jp'],
-        defaultLocale: 'fr',
-        features: ['lobby', 'rooms', 'smiley'],
-      };
+      // Pas de fallback factice : on garde tenant=null + error
+      error.value = e?.response?.data?.message || e?.message || 'Impossible de joindre le serveur';
+      tenant.value = null;
     } finally {
       loading.value = false;
     }

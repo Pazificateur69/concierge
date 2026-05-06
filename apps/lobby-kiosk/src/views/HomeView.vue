@@ -19,9 +19,9 @@ const voice = useVoiceStore();
 const cards = [
   { icon: 'map', key: 'map', target: '/map', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=900&q=80', meta: 'Lyon, 2e' },
   { icon: 'restaurant', key: 'menu', target: '/menu', image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&q=80', meta: 'Service 24/24' },
-  { icon: 'spa', key: 'spa', target: '/services', image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=900&q=80', meta: 'Sur réservation' },
+  { icon: 'spa', key: 'spa', target: '/spa', image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=900&q=80', meta: 'Sur réservation' },
+  { icon: 'sun', key: 'weather', target: '/activities', image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900&q=80', meta: 'Météo & sorties' },
   { icon: 'bell', key: 'services', target: '/services', image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=900&q=80', meta: 'Conciergerie' },
-  { icon: 'sun', key: 'weather', target: '/services', image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900&q=80', meta: 'En direct' },
   { icon: 'help', key: 'help', target: '/help', image: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=900&q=80', meta: 'Multilingue' },
 ];
 

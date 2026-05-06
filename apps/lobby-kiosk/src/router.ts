@@ -4,8 +4,10 @@ import type { RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   { path: '/', component: () => import('./views/HomeView.vue') },
   { path: '/map', component: () => import('./views/MapView.vue') },
-  { path: '/services', component: () => import('./views/ServicesView.vue') },
   { path: '/menu', component: () => import('./views/MenuView.vue') },
+  { path: '/services', component: () => import('./views/ServicesView.vue') },
+  { path: '/spa', component: () => import('./views/SpaView.vue') },
+  { path: '/activities', component: () => import('./views/ActivitiesView.vue') },
   { path: '/help', component: () => import('./views/HelpView.vue') },
 ];
 
