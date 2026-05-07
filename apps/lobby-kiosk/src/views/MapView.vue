@@ -125,6 +125,54 @@ function poiPhoto(p: Poi) {
   return p.photo || POI_PHOTOS[p.category] || POI_PHOTOS.monument;
 }
 
+// === V4 polish: walking distance + walk time + open in maps ===
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function distanceFromHotel(p: Poi): number {
+  const lat = tenantStore.tenant?.contact?.lat ?? 45.7578;
+  const lng = tenantStore.tenant?.contact?.lng ?? 4.832;
+  return Math.round(haversineMeters(lat, lng, p.lat, p.lng));
+}
+
+function walkMinutes(p: Poi): number {
+  const meters = distanceFromHotel(p);
+  // Average walking pace 80 m/min in city
+  return Math.max(1, Math.round(meters / 80));
+}
+
+function transportMode(p: Poi): { label: string; icon: string } {
+  const m = distanceFromHotel(p);
+  if (m < 800) return { label: 'À pied', icon: 'walk' };
+  if (m < 3000) return { label: 'Métro / Vélo', icon: 'bike' };
+  return { label: 'Taxi recommandé', icon: 'car' };
+}
+
+function openInMaps(p: Poi) {
+  const url = `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=18/${p.lat}/${p.lng}`;
+  window.open(url, '_blank');
+}
+
+function callPoi(p: Poi) {
+  if ((p as any).phone) window.location.href = `tel:${(p as any).phone}`;
+}
+
+function dirToHotel(p: Poi): string {
+  const lat = tenantStore.tenant?.contact?.lat ?? 45.7578;
+  const lng = tenantStore.tenant?.contact?.lng ?? 4.832;
+  const dy = p.lat - lat;
+  const dx = p.lng - lng;
+  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const compass = ['Est', 'Nord-Est', 'Nord', 'Nord-Ouest', 'Ouest', 'Sud-Ouest', 'Sud', 'Sud-Est'];
+  const idx = Math.round(((angle + 360) % 360) / 45) % 8;
+  return compass[idx];
+}
+
 watch(() => i18n.locale.value, refreshMarkers);
 </script>
 
@@ -189,6 +237,68 @@ watch(() => i18n.locale.value, refreshMarkers);
             <div class="map-loading__spinner"></div>
             <span class="eyebrow">Chargement de la carte</span>
           </div>
+
+          <!-- POI Detail Panel — overlays the map when a POI is selected -->
+          <transition name="poi-detail">
+            <div v-if="selected" class="poi-detail">
+              <button class="poi-detail__close" @click="selected = null" aria-label="Fermer">×</button>
+              <div class="poi-detail__image" :style="{ backgroundImage: `url(${poiPhoto(selected)})` }">
+                <div class="poi-detail__overlay"></div>
+                <div class="poi-detail__header">
+                  <span class="eyebrow poi-detail__cat">{{ CAT_LABELS[selected.category] }}</span>
+                  <h3 class="serif poi-detail__name">{{ poiName(selected) }}</h3>
+                </div>
+              </div>
+              <div class="poi-detail__body">
+                <div class="poi-detail__metrics">
+                  <div class="metric">
+                    <span class="eyebrow">Distance</span>
+                    <span class="metric__value serif">{{ distanceFromHotel(selected) }}<span class="metric__unit">m</span></span>
+                  </div>
+                  <div class="metric">
+                    <span class="eyebrow">À pied</span>
+                    <span class="metric__value serif">{{ walkMinutes(selected) }}<span class="metric__unit">min</span></span>
+                  </div>
+                  <div class="metric">
+                    <span class="eyebrow">Direction</span>
+                    <span class="metric__value serif metric__value--small">{{ dirToHotel(selected) }}</span>
+                  </div>
+                  <div class="metric">
+                    <span class="eyebrow">Transport</span>
+                    <span class="metric__value serif metric__value--small">{{ transportMode(selected).label }}</span>
+                  </div>
+                </div>
+
+                <div class="poi-detail__info" v-if="selected.hours || (selected as any).phone || selected.rating">
+                  <div v-if="selected.rating" class="poi-detail__row">
+                    <span class="eyebrow">Note</span>
+                    <span class="poi-detail__row-val">★ {{ selected.rating.toFixed(1) }}</span>
+                  </div>
+                  <div v-if="selected.hours" class="poi-detail__row">
+                    <span class="eyebrow">Horaires</span>
+                    <span class="poi-detail__row-val">{{ selected.hours }}</span>
+                  </div>
+                  <div v-if="(selected as any).phone" class="poi-detail__row">
+                    <span class="eyebrow">Téléphone</span>
+                    <a :href="`tel:${(selected as any).phone}`" class="poi-detail__row-val poi-detail__link">{{ (selected as any).phone }}</a>
+                  </div>
+                </div>
+
+                <p v-if="(selected.description as any)?.fr || (selected.description as any)?.en" class="poi-detail__desc">
+                  {{ (selected.description as any)[i18n.locale.value] || (selected.description as any).fr || Object.values(selected.description as any)[0] }}
+                </p>
+
+                <div class="poi-detail__actions">
+                  <button class="poi-detail__btn poi-detail__btn--primary" @click="openInMaps(selected)">
+                    Itinéraire <Icon name="arrow-right" :size="13" />
+                  </button>
+                  <button v-if="(selected as any).phone" class="poi-detail__btn" @click="callPoi(selected)">
+                    Appeler
+                  </button>
+                </div>
+              </div>
+            </div>
+          </transition>
         </div>
       </div>
     </ion-content>
@@ -340,6 +450,122 @@ watch(() => i18n.locale.value, refreshMarkers);
   border-radius: 50%; animation: spin 1s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* POI DETAIL PANEL — overlays right side of the map */
+.poi-detail {
+  position: absolute; top: 16px; right: 16px;
+  width: 380px; max-width: calc(100% - 32px); max-height: calc(100% - 32px);
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  box-shadow: 0 24px 64px rgba(20,32,46,0.18);
+  z-index: 500;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.poi-detail__close {
+  position: absolute; top: 14px; right: 14px;
+  width: 36px; height: 36px;
+  background: rgba(245,240,232,0.95); color: var(--c-ink);
+  border: none; font-size: 22px; line-height: 1;
+  cursor: pointer; display: grid; place-items: center;
+  z-index: 2;
+}
+.poi-detail__close:hover { background: white; }
+
+.poi-detail__image {
+  position: relative;
+  height: 200px;
+  background-size: cover; background-position: center;
+}
+.poi-detail__overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(20,32,46,0) 30%, rgba(20,32,46,0.85) 100%);
+}
+.poi-detail__header {
+  position: absolute; bottom: 16px; left: 18px; right: 18px;
+  color: white;
+}
+.poi-detail__cat { color: var(--c-accent-soft); }
+.poi-detail__name {
+  font-size: 24px; line-height: 1.15;
+  margin: 4px 0 0; font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.poi-detail__body {
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.poi-detail__metrics {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  border: 1px solid var(--c-border);
+}
+.metric {
+  padding: 10px 14px;
+  border-right: 1px solid var(--c-border);
+  border-bottom: 1px solid var(--c-border);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.metric:nth-child(2n) { border-right: none; }
+.metric:nth-last-child(-n+2) { border-bottom: none; }
+.metric__value {
+  font-size: 22px; line-height: 1; color: var(--c-ink);
+  font-feature-settings: 'tnum'; letter-spacing: -0.01em;
+}
+.metric__value--small { font-size: 16px; font-style: italic; }
+.metric__unit { font-size: 12px; opacity: 0.6; margin-left: 1px; font-family: 'Cormorant Garamond', serif; }
+
+.poi-detail__info {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 0;
+  border-top: 1px solid var(--c-border);
+}
+.poi-detail__row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.poi-detail__row .eyebrow { color: var(--c-text-muted); }
+.poi-detail__row-val { color: var(--c-ink); font-family: 'Cormorant Garamond', serif; font-size: 16px; }
+.poi-detail__link { text-decoration: none; }
+.poi-detail__link:hover { color: var(--c-accent-deep); }
+
+.poi-detail__desc {
+  font-size: 13px; line-height: 1.55;
+  color: var(--c-text-muted);
+  margin: 0; padding-top: 4px;
+  font-style: italic;
+}
+
+.poi-detail__actions {
+  display: flex; gap: 8px; margin-top: 4px;
+}
+.poi-detail__btn {
+  flex: 1; padding: 13px 16px;
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border-strong);
+  font-family: inherit; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--c-ink); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s;
+}
+.poi-detail__btn:hover { background: var(--c-paper); }
+.poi-detail__btn--primary {
+  background: var(--c-ink); color: white; border-color: var(--c-ink);
+}
+.poi-detail__btn--primary:hover {
+  background: var(--c-accent); border-color: var(--c-accent);
+}
+
+.poi-detail-enter-active, .poi-detail-leave-active {
+  transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.poi-detail-enter-from, .poi-detail-leave-to {
+  opacity: 0; transform: translateX(20px);
+}
 
 @media (max-width: 1000px) {
   .mapview { grid-template-columns: 1fr; grid-template-rows: 50% 50%; }
