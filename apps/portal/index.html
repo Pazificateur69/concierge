@@ -465,6 +465,26 @@
   }
   .colophon__bottom-right { letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; color: var(--c-accent-soft); }
 
+  /* ARCHITECTURE */
+  .archi { padding: 96px 32px; background: var(--c-bg-card); border-top: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border); }
+  .archi__inner { max-width: 1320px; margin: 0 auto; }
+  .archi__head { max-width: 720px; margin: 0 auto 48px; text-align: center; }
+  .archi__head h2 { font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 500; margin: 8px 0 16px; color: var(--c-ink); letter-spacing: -0.02em; line-height: 1.1; }
+  .archi__head h2 em { color: var(--c-accent-deep); font-style: italic; }
+  .archi__head p { color: var(--c-text-muted); font-size: 16px; line-height: 1.6; margin: 0; }
+  .archi__head code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: var(--c-paper); padding: 2px 6px; color: var(--c-ink); }
+  .archi__diagram { background: var(--c-bg); padding: 40px 32px; border: 1px solid var(--c-border); margin-bottom: 48px; overflow-x: auto; }
+  .archi__diagram svg { width: 100%; height: auto; min-width: 1100px; max-width: 1320px; display: block; margin: 0 auto; }
+
+  .archi__principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px 32px; }
+  .principle { padding: 28px 24px; background: var(--c-paper); border-left: 2px solid var(--c-accent); position: relative; transition: all 0.25s; }
+  .principle:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(20,32,46,0.06); }
+  .principle__num { position: absolute; top: 14px; right: 18px; font-size: 22px; color: var(--c-accent-soft); font-style: italic; opacity: 0.6; font-feature-settings: 'tnum'; }
+  .principle h3 { font-family: 'Cormorant Garamond', serif; font-size: 21px; font-weight: 500; margin: 0 0 8px; color: var(--c-ink); letter-spacing: -0.01em; }
+  .principle p { font-size: 13px; line-height: 1.65; color: var(--c-text-muted); margin: 0; }
+  .principle code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: var(--c-bg-card); padding: 1px 6px; color: var(--c-ink); border: 1px solid var(--c-border); }
+  .principle em { color: var(--c-accent-deep); font-style: italic; font-weight: 600; }
+
   /* LIVE STATS */
   .livestats { padding: 96px 32px 64px; background: var(--c-paper); border-top: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border); }
   .livestats__inner { max-width: 1320px; margin: 0 auto; }
@@ -523,6 +543,9 @@
     .compare__card { grid-template-columns: 1fr; }
     .compare__bg { height: 200px; }
     .compare__head h2 { font-size: 36px; }
+    .archi__head h2 { font-size: 34px; }
+    .archi__principles { grid-template-columns: 1fr 1fr; }
+    .archi__diagram { padding: 24px 16px; }
   }
   @media (max-width: 540px) {
     .topbar { padding: 14px 18px; gap: 12px; flex-wrap: wrap; }
@@ -541,6 +564,10 @@
     .app-card__title { font-size: 22px; }
     .colophon__bottom { padding: 18px; }
     .demo__title, .resource__title { font-size: 20px; }
+    .archi { padding: 56px 12px; }
+    .archi__head h2 { font-size: 28px; }
+    .archi__principles { grid-template-columns: 1fr; gap: 12px; }
+    .archi__diagram { padding: 16px 8px; }
   }
 </style>
 </head>
@@ -701,6 +728,254 @@
         </div>
       </div>
     </a>
+  </div>
+</section>
+
+<!-- ARCHITECTURE DIAGRAM -->
+<section class="archi">
+  <div class="archi__inner">
+    <header class="archi__head">
+      <span class="eyebrow">Architecture technique</span>
+      <h2>Une stack <em>monorepo</em>, cinq interfaces, six services</h2>
+      <p>Tout passe par un API Gateway unique. Les microservices NestJS partagent une base MongoDB Atlas avec isolation par <code>tenantId</code>. Temps réel via Socket.io pour la borne lobby et la réception.</p>
+    </header>
+
+    <div class="archi__diagram">
+      <svg viewBox="0 0 1320 760" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagramme de l'architecture Concierge">
+        <defs>
+          <linearGradient id="archi-grad-paper" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f5f0e8"/>
+            <stop offset="100%" stop-color="#ede5d6"/>
+          </linearGradient>
+          <linearGradient id="archi-grad-ink" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1c2a3b"/>
+            <stop offset="100%" stop-color="#14202e"/>
+          </linearGradient>
+          <linearGradient id="archi-grad-gold" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#b8985a"/>
+            <stop offset="100%" stop-color="#8e7138"/>
+          </linearGradient>
+          <marker id="arrow-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#14202e" opacity="0.4"/>
+          </marker>
+          <marker id="arrow-gold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#b8985a"/>
+          </marker>
+          <filter id="archi-shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#14202e" flood-opacity="0.06"/>
+          </filter>
+        </defs>
+
+        <!-- ============ LAYER LABELS (left) ============ -->
+        <g class="archi-layer-label">
+          <text x="14" y="100" font-family="Cormorant Garamond, serif" font-size="13" font-style="italic" fill="#8e7138">01 · Frontends</text>
+          <text x="14" y="105" font-family="Inter, sans-serif" font-size="9" font-weight="600" letter-spacing="2.4" fill="#5a6675" dy="14">UTILISATEURS</text>
+          <text x="14" y="305" font-family="Cormorant Garamond, serif" font-size="13" font-style="italic" fill="#8e7138">02 · Gateway</text>
+          <text x="14" y="310" font-family="Inter, sans-serif" font-size="9" font-weight="600" letter-spacing="2.4" fill="#5a6675" dy="14">REVERSE PROXY</text>
+          <text x="14" y="455" font-family="Cormorant Garamond, serif" font-size="13" font-style="italic" fill="#8e7138">03 · Services</text>
+          <text x="14" y="460" font-family="Inter, sans-serif" font-size="9" font-weight="600" letter-spacing="2.4" fill="#5a6675" dy="14">MICROSERVICES</text>
+          <text x="14" y="660" font-family="Cormorant Garamond, serif" font-size="13" font-style="italic" fill="#8e7138">04 · Données</text>
+          <text x="14" y="665" font-family="Inter, sans-serif" font-size="9" font-weight="600" letter-spacing="2.4" fill="#5a6675" dy="14">PERSISTENCE</text>
+        </g>
+
+        <!-- ============ LAYER 1 — Frontends ============ -->
+        <g class="archi-row archi-row--frontends">
+          <!-- Portal -->
+          <g transform="translate(140, 60)">
+            <rect width="200" height="120" fill="url(#archi-grad-paper)" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <text x="16" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">PORTAL</text>
+            <text x="16" y="58" font-family="Cormorant Garamond, serif" font-size="22" font-weight="500" fill="#14202e">Landing éditoriale</text>
+            <text x="16" y="80" font-size="11" fill="#5a6675">HTML statique + JS</text>
+            <text x="16" y="96" font-size="11" fill="#5a6675">Vercel · zéro framework</text>
+            <text x="16" y="112" font-size="10" font-style="italic" fill="#97a0ad">Live counters · 30s polling</text>
+          </g>
+          <!-- Lobby -->
+          <g transform="translate(360, 60)">
+            <rect width="200" height="120" fill="url(#archi-grad-paper)" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <text x="16" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">LOBBY KIOSK</text>
+            <text x="16" y="58" font-family="Cormorant Garamond, serif" font-size="22" font-weight="500" fill="#14202e">Borne tactile</text>
+            <text x="16" y="80" font-size="11" fill="#5a6675">Vue 3 + Ionic + Pinia</text>
+            <text x="16" y="96" font-size="11" fill="#5a6675">PWA · 7 langues + RTL</text>
+            <text x="16" y="112" font-size="10" font-style="italic" fill="#97a0ad">Carte, menu, spa, chat, tour 360°</text>
+          </g>
+          <!-- Smiley -->
+          <g transform="translate(580, 60)">
+            <rect width="200" height="120" fill="url(#archi-grad-paper)" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <text x="16" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">SMILEY</text>
+            <text x="16" y="58" font-family="Cormorant Garamond, serif" font-size="22" font-weight="500" fill="#14202e">Borne satisfaction</text>
+            <text x="16" y="80" font-size="11" fill="#5a6675">Vue 3 + Ionic</text>
+            <text x="16" y="96" font-size="11" fill="#5a6675">Conditional logic + offline</text>
+            <text x="16" y="112" font-size="10" font-style="italic" fill="#97a0ad">NPS · multi-survey · modes</text>
+          </g>
+          <!-- Admin -->
+          <g transform="translate(800, 60)">
+            <rect width="200" height="120" fill="url(#archi-grad-paper)" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <text x="16" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">ADMIN</text>
+            <text x="16" y="58" font-family="Cormorant Garamond, serif" font-size="22" font-weight="500" fill="#14202e">Backoffice</text>
+            <text x="16" y="80" font-size="11" fill="#5a6675">Angular 17 + Signals</text>
+            <text x="16" y="96" font-size="11" fill="#5a6675">Charts inline-SVG</text>
+            <text x="16" y="112" font-size="10" font-style="italic" fill="#97a0ad">Analytics · CRUD · A/B · audit</text>
+          </g>
+          <!-- Reception -->
+          <g transform="translate(1020, 60)">
+            <rect width="200" height="120" fill="url(#archi-grad-paper)" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <text x="16" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">RÉCEPTION</text>
+            <text x="16" y="58" font-family="Cormorant Garamond, serif" font-size="22" font-weight="500" fill="#14202e">Kanban temps réel</text>
+            <text x="16" y="80" font-size="11" fill="#5a6675">Angular 17 + Signals</text>
+            <text x="16" y="96" font-size="11" fill="#5a6675">WebSocket + Notif API</text>
+            <text x="16" y="112" font-size="10" font-style="italic" fill="#97a0ad">Drag · raccourcis · ticket cuisine</text>
+          </g>
+        </g>
+
+        <!-- Connectors layer 1 → 2 -->
+        <g stroke="#14202e" stroke-opacity="0.18" stroke-width="1" fill="none">
+          <path d="M 240 180 Q 240 220, 460 280" marker-end="url(#arrow-ink)"/>
+          <path d="M 460 180 Q 460 220, 540 280" marker-end="url(#arrow-ink)"/>
+          <path d="M 680 180 L 680 280" marker-end="url(#arrow-ink)"/>
+          <path d="M 900 180 Q 900 220, 820 280" marker-end="url(#arrow-ink)"/>
+          <path d="M 1120 180 Q 1120 220, 900 280" marker-end="url(#arrow-ink)"/>
+        </g>
+
+        <!-- ============ LAYER 2 — API Gateway ============ -->
+        <g transform="translate(360, 280)">
+          <rect width="600" height="100" fill="url(#archi-grad-ink)" stroke="#14202e" stroke-width="1"/>
+          <text x="20" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#d6bd87">API GATEWAY · NESTJS</text>
+          <text x="20" y="60" font-family="Cormorant Garamond, serif" font-size="26" font-weight="500" fill="#f5f0e8">https://concierge-gateway.onrender.com</text>
+          <text x="20" y="82" font-size="11" fill="rgba(245,240,232,0.7)">http-proxy-middleware · Helmet HSTS · CORS dynamique · logs JSON · Swagger /api/docs · /healthz</text>
+        </g>
+
+        <!-- Connectors layer 2 → 3 -->
+        <g stroke="#b8985a" stroke-opacity="0.55" stroke-width="1.5" fill="none">
+          <path d="M 460 380 L 220 440" marker-end="url(#arrow-gold)"/>
+          <path d="M 540 380 L 420 440" marker-end="url(#arrow-gold)"/>
+          <path d="M 620 380 L 620 440" marker-end="url(#arrow-gold)"/>
+          <path d="M 700 380 L 820 440" marker-end="url(#arrow-gold)"/>
+          <path d="M 780 380 L 1020 440" marker-end="url(#arrow-gold)"/>
+          <path d="M 860 380 L 1180 440" marker-end="url(#arrow-gold)"/>
+        </g>
+
+        <!-- ============ LAYER 3 — Microservices ============ -->
+        <g class="archi-row archi-row--services">
+          <g transform="translate(120, 440)">
+            <rect width="180" height="140" fill="#ffffff" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <rect width="180" height="3" fill="#b8985a"/>
+            <text x="14" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">/AUTH</text>
+            <text x="14" y="56" font-family="Cormorant Garamond, serif" font-size="20" font-weight="500" fill="#14202e">Authentification</text>
+            <text x="14" y="80" font-size="11" fill="#5a6675">JWT 15min + refresh rotation</text>
+            <text x="14" y="96" font-size="11" fill="#5a6675">Throttler 100/min</text>
+            <text x="14" y="112" font-size="11" fill="#5a6675">5 rôles RBAC</text>
+            <text x="14" y="130" font-size="10" font-style="italic" fill="#97a0ad">+ fallback in-gateway</text>
+          </g>
+          <g transform="translate(320, 440)">
+            <rect width="180" height="140" fill="#ffffff" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <rect width="180" height="3" fill="#b8985a"/>
+            <text x="14" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">/TENANTS</text>
+            <text x="14" y="56" font-family="Cormorant Garamond, serif" font-size="20" font-weight="500" fill="#14202e">Hôtels</text>
+            <text x="14" y="80" font-size="11" fill="#5a6675">Slug, theme, locales</text>
+            <text x="14" y="96" font-size="11" fill="#5a6675">Multi-tenant directory</text>
+            <text x="14" y="112" font-size="11" fill="#5a6675">2 hôtels seedés</text>
+            <text x="14" y="130" font-size="10" font-style="italic" fill="#97a0ad">Royal Lyon · Côte d'Azur</text>
+          </g>
+          <g transform="translate(520, 440)">
+            <rect width="180" height="140" fill="#ffffff" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <rect width="180" height="3" fill="#b8985a"/>
+            <text x="14" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">/CONTENT</text>
+            <text x="14" y="56" font-family="Cormorant Garamond, serif" font-size="20" font-weight="500" fill="#14202e">POIs &amp; Pages</text>
+            <text x="14" y="80" font-size="11" fill="#5a6675">CRUD + recherche regex</text>
+            <text x="14" y="96" font-size="11" fill="#5a6675">Soft-delete</text>
+            <text x="14" y="112" font-size="11" fill="#5a6675">Photos + horaires + rating</text>
+            <text x="14" y="130" font-size="10" font-style="italic" fill="#97a0ad">46 POIs Lyon + Nice</text>
+          </g>
+          <g transform="translate(720, 440)">
+            <rect width="180" height="140" fill="#ffffff" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <rect width="180" height="3" fill="#b8985a"/>
+            <text x="14" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">/ORDERS</text>
+            <text x="14" y="56" font-family="Cormorant Garamond, serif" font-size="20" font-weight="500" fill="#14202e">Commandes</text>
+            <text x="14" y="80" font-size="11" fill="#5a6675">Menu CRUD + WebSocket</text>
+            <text x="14" y="96" font-size="11" fill="#5a6675">Webhooks HMAC sortants</text>
+            <text x="14" y="112" font-size="11" fill="#5a6675">/public-stats (no PII)</text>
+            <text x="14" y="130" font-size="10" font-style="italic" fill="#97a0ad">60 plats · 160 commandes</text>
+          </g>
+          <g transform="translate(920, 440)">
+            <rect width="180" height="140" fill="#ffffff" stroke="#d8cfbe" stroke-width="1" filter="url(#archi-shadow)"/>
+            <rect width="180" height="3" fill="#b8985a"/>
+            <text x="14" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">/SURVEYS</text>
+            <text x="14" y="56" font-family="Cormorant Garamond, serif" font-size="20" font-weight="500" fill="#14202e">Satisfaction</text>
+            <text x="14" y="80" font-size="11" fill="#5a6675">Builder dynamique</text>
+            <text x="14" y="96" font-size="11" fill="#5a6675">Conditional logic</text>
+            <text x="14" y="112" font-size="11" fill="#5a6675">Smiley · NPS · texte · QCM</text>
+            <text x="14" y="130" font-size="10" font-style="italic" fill="#97a0ad">2 enquêtes · 440 réponses</text>
+          </g>
+          <g transform="translate(1120, 440)">
+            <rect width="180" height="140" fill="#ffffff" stroke="#d8cfbe" stroke-width="1" stroke-dasharray="4,3" filter="url(#archi-shadow)"/>
+            <rect width="180" height="3" fill="#b8985a" opacity="0.5"/>
+            <text x="14" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="#8e7138">/NOTIFY</text>
+            <text x="14" y="56" font-family="Cormorant Garamond, serif" font-size="20" font-weight="500" fill="#14202e">Notifications</text>
+            <text x="14" y="80" font-size="11" fill="#5a6675">Email, SMS, push</text>
+            <text x="14" y="96" font-size="11" fill="#5a6675">Webhooks consumers</text>
+            <text x="14" y="112" font-size="11" fill="#5a6675">PDF reports</text>
+            <text x="14" y="130" font-size="10" font-style="italic" fill="#97a0ad">stub V4 · port complet V5</text>
+          </g>
+        </g>
+
+        <!-- Connectors layer 3 → 4 -->
+        <g stroke="#14202e" stroke-opacity="0.18" stroke-width="1" fill="none">
+          <path d="M 210 580 L 660 640" marker-end="url(#arrow-ink)"/>
+          <path d="M 410 580 L 660 640" marker-end="url(#arrow-ink)"/>
+          <path d="M 610 580 L 660 640" marker-end="url(#arrow-ink)"/>
+          <path d="M 810 580 L 660 640" marker-end="url(#arrow-ink)"/>
+          <path d="M 1010 580 L 660 640" marker-end="url(#arrow-ink)"/>
+        </g>
+
+        <!-- ============ LAYER 4 — Database ============ -->
+        <g transform="translate(420, 640)">
+          <rect width="480" height="90" fill="url(#archi-grad-gold)" stroke="#8e7138" stroke-width="1"/>
+          <text x="24" y="28" font-size="9" font-weight="700" letter-spacing="2.4" fill="rgba(255,255,255,0.85)">MONGODB ATLAS · M0 FREE</text>
+          <text x="24" y="58" font-family="Cormorant Garamond, serif" font-size="24" font-weight="500" fill="white">Multi-tenant via discriminator</text>
+          <text x="24" y="78" font-size="11" fill="rgba(255,255,255,0.85)">tenants · users · pois · menu · orders · surveys · responses · audit_log</text>
+        </g>
+
+        <!-- Real-time WebSocket layer (overlay) -->
+        <g class="archi-realtime">
+          <line x1="600" y1="240" x2="1120" y2="240" stroke="#36644a" stroke-width="1" stroke-dasharray="6,4" opacity="0.6"/>
+          <text x="850" y="234" text-anchor="middle" font-family="Cormorant Garamond, serif" font-style="italic" font-size="13" fill="#36644a">Socket.io · push commande temps réel</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Legend / key principles -->
+    <div class="archi__principles">
+      <div class="principle">
+        <span class="principle__num serif">01</span>
+        <h3 class="serif">Multi-tenant par discriminator</h3>
+        <p>Une seule base, un seul déploiement. Chaque collection porte un <code>tenantId</code>. Onboarder un nouvel hôtel = 0 ops.</p>
+      </div>
+      <div class="principle">
+        <span class="principle__num serif">02</span>
+        <h3 class="serif">Frontends spécialisés</h3>
+        <p>Vue + Ionic pour les bornes touch-first, Angular Signals pour les dashboards form-heavy. Tokens design partagés via <code>@concierge/design-tokens</code>.</p>
+      </div>
+      <div class="principle">
+        <span class="principle__num serif">03</span>
+        <h3 class="serif">Temps réel via Socket.io</h3>
+        <p>Quand une commande est créée sur la borne, elle pousse instantanément vers la réception. Room <code>tenant-{id}</code> pour l'isolation.</p>
+      </div>
+      <div class="principle">
+        <span class="principle__num serif">04</span>
+        <h3 class="serif">Sécurité par défaut</h3>
+        <p>JWT 15 min + refresh rotation, Helmet + HSTS preload, Throttler 100 req/min sur auth, validation pipe, RGPD anonymisation, audit log.</p>
+      </div>
+      <div class="principle">
+        <span class="principle__num serif">05</span>
+        <h3 class="serif">Observabilité</h3>
+        <p><code>/healthz</code> + <code>/readyz</code> sur chaque service, logs JSON structurés au gateway avec correlation-id et tenant-id, Swagger 3.0 agrégé.</p>
+      </div>
+      <div class="principle">
+        <span class="principle__num serif">06</span>
+        <h3 class="serif">Déploiement minimal</h3>
+        <p>Vercel pour les 5 frontends, Render free tier pour le backend, MongoDB Atlas M0. <code>buildFilter</code> par service pour des deploys ciblés. Coût total : <em>0 €</em>.</p>
+      </div>
+    </div>
   </div>
 </section>
 

@@ -236,6 +236,83 @@ console.info('[Concierge Admin] API base URL =', API);
                 <li *ngIf="!activityFeed().length" class="empty">En attente d'activité…</li>
               </ul>
             </div>
+
+            <!-- ARCHITECTURE OVERVIEW -->
+            <div class="card mini-archi">
+              <header class="card__head">
+                <h3 class="serif">Architecture · vue d'ensemble</h3>
+                <a class="link-btn" [href]="apiDocsUrl" target="_blank">Swagger /api/docs ↗</a>
+              </header>
+              <svg viewBox="0 0 720 360" class="mini-archi__svg" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                  <marker id="ma-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                    <path d="M0,0 L10,5 L0,10 z" fill="#14202e" opacity="0.4"/>
+                  </marker>
+                  <marker id="ma-arrow-gold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                    <path d="M0,0 L10,5 L0,10 z" fill="#b8985a"/>
+                  </marker>
+                </defs>
+                <!-- L1 frontends -->
+                <g class="ma-tier">
+                  <text x="20" y="22" class="ma-tier-label">01 · TOUCHPOINTS</text>
+                  <g class="ma-box ma-box--paper" transform="translate(20, 36)"><rect width="120" height="56"/><text x="10" y="20" class="ma-box-eye">PORTAL</text><text x="10" y="38" class="ma-box-name">Landing</text></g>
+                  <g class="ma-box ma-box--paper" transform="translate(160, 36)"><rect width="120" height="56"/><text x="10" y="20" class="ma-box-eye">LOBBY</text><text x="10" y="38" class="ma-box-name">Vue + Ionic</text></g>
+                  <g class="ma-box ma-box--paper" transform="translate(300, 36)"><rect width="120" height="56"/><text x="10" y="20" class="ma-box-eye">SMILEY</text><text x="10" y="38" class="ma-box-name">Vue + Ionic</text></g>
+                  <g class="ma-box ma-box--paper ma-box--current" transform="translate(440, 36)"><rect width="120" height="56"/><text x="10" y="20" class="ma-box-eye">ADMIN</text><text x="10" y="38" class="ma-box-name">Angular 17</text><circle cx="110" cy="14" r="3" fill="#36644a"/></g>
+                  <g class="ma-box ma-box--paper" transform="translate(580, 36)"><rect width="120" height="56"/><text x="10" y="20" class="ma-box-eye">RÉCEPTION</text><text x="10" y="38" class="ma-box-name">Angular 17</text></g>
+                </g>
+                <g stroke="#14202e" stroke-opacity="0.18" fill="none">
+                  <path d="M 80 92 Q 80 110, 360 140" marker-end="url(#ma-arrow)"/>
+                  <path d="M 220 92 Q 220 110, 360 140" marker-end="url(#ma-arrow)"/>
+                  <path d="M 360 92 L 360 140" marker-end="url(#ma-arrow)"/>
+                  <path d="M 500 92 Q 500 110, 360 140" marker-end="url(#ma-arrow)"/>
+                  <path d="M 640 92 Q 640 110, 360 140" marker-end="url(#ma-arrow)"/>
+                </g>
+                <!-- L2 gateway -->
+                <g transform="translate(120, 140)">
+                  <rect width="480" height="50" fill="#14202e"/>
+                  <text x="16" y="20" class="ma-box-eye" fill="#d6bd87">API GATEWAY · NESTJS</text>
+                  <text x="16" y="40" class="ma-box-name" fill="#f5f0e8">helmet · HSTS · CORS · proxy · /api/docs</text>
+                </g>
+                <g stroke="#b8985a" stroke-opacity="0.6" fill="none">
+                  <path d="M 200 190 L 100 220" marker-end="url(#ma-arrow-gold)"/>
+                  <path d="M 280 190 L 240 220" marker-end="url(#ma-arrow-gold)"/>
+                  <path d="M 360 190 L 380 220" marker-end="url(#ma-arrow-gold)"/>
+                  <path d="M 440 190 L 520 220" marker-end="url(#ma-arrow-gold)"/>
+                  <path d="M 520 190 L 660 220" marker-end="url(#ma-arrow-gold)"/>
+                </g>
+                <!-- L3 services -->
+                <g class="ma-tier">
+                  <text x="20" y="220" class="ma-tier-label">03 · MICROSERVICES</text>
+                  <g class="ma-box ma-box--white" transform="translate(20, 230)"><rect width="130" height="56"/><rect width="130" height="2" fill="#b8985a"/><text x="10" y="22" class="ma-box-eye">/AUTH</text><text x="10" y="40" class="ma-box-meta">JWT + refresh</text></g>
+                  <g class="ma-box ma-box--white" transform="translate(160, 230)"><rect width="130" height="56"/><rect width="130" height="2" fill="#b8985a"/><text x="10" y="22" class="ma-box-eye">/TENANTS</text><text x="10" y="40" class="ma-box-meta">2 hôtels</text></g>
+                  <g class="ma-box ma-box--white" transform="translate(300, 230)"><rect width="130" height="56"/><rect width="130" height="2" fill="#b8985a"/><text x="10" y="22" class="ma-box-eye">/CONTENT</text><text x="10" y="40" class="ma-box-meta">46 POIs</text></g>
+                  <g class="ma-box ma-box--white" transform="translate(440, 230)"><rect width="130" height="56"/><rect width="130" height="2" fill="#b8985a"/><text x="10" y="22" class="ma-box-eye">/ORDERS</text><text x="10" y="40" class="ma-box-meta">menu + WS</text></g>
+                  <g class="ma-box ma-box--white" transform="translate(580, 230)"><rect width="120" height="56"/><rect width="120" height="2" fill="#b8985a"/><text x="10" y="22" class="ma-box-eye">/SURVEYS</text><text x="10" y="40" class="ma-box-meta">NPS + smiley</text></g>
+                </g>
+                <g stroke="#14202e" stroke-opacity="0.18" fill="none">
+                  <path d="M 85 286 L 360 320" marker-end="url(#ma-arrow)"/>
+                  <path d="M 225 286 L 360 320" marker-end="url(#ma-arrow)"/>
+                  <path d="M 365 286 L 360 320" marker-end="url(#ma-arrow)"/>
+                  <path d="M 505 286 L 360 320" marker-end="url(#ma-arrow)"/>
+                  <path d="M 640 286 L 360 320" marker-end="url(#ma-arrow)"/>
+                </g>
+                <!-- L4 db -->
+                <g transform="translate(220, 320)">
+                  <rect width="280" height="36" fill="#b8985a"/>
+                  <text x="14" y="16" class="ma-box-eye" fill="rgba(255,255,255,0.85)">MONGODB ATLAS · MULTI-TENANT</text>
+                  <text x="14" y="30" class="ma-box-name" fill="white">discriminator par tenantId</text>
+                </g>
+              </svg>
+
+              <div class="mini-archi__legend">
+                <span><span class="dot dot--paper"></span> Frontend Vercel</span>
+                <span><span class="dot dot--ink"></span> Gateway</span>
+                <span><span class="dot dot--white"></span> Service Render</span>
+                <span><span class="dot dot--gold"></span> Mongo Atlas</span>
+                <span><span class="dot dot--success"></span> Vous êtes ici</span>
+              </div>
+            </div>
           </section>
 
           <!-- ANALYTICS -->
@@ -1565,6 +1642,26 @@ console.info('[Concierge Admin] API base URL =', API);
     @keyframes tickerIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
     .ticker-time { color: var(--c-text-muted); font-size: 11px; }
     .ticker-text { color: var(--c-ink); font-size: 13px; }
+
+    /* MINI ARCHITECTURE WIDGET */
+    .mini-archi__svg { width: 100%; height: auto; max-width: 720px; display: block; margin: 8px auto 16px; }
+    .mini-archi .ma-tier-label { font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.2em; fill: var(--c-accent-deep); text-transform: uppercase; }
+    .mini-archi .ma-box-eye { font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; fill: var(--c-accent-deep); }
+    .mini-archi .ma-box-name { font-family: 'Cormorant Garamond', serif; font-size: 14px; font-weight: 500; fill: var(--c-ink); }
+    .mini-archi .ma-box-meta { font-family: 'Inter', sans-serif; font-size: 10px; fill: var(--c-text-muted); }
+    .mini-archi .ma-box rect:first-child { stroke: var(--c-border-strong); stroke-width: 1; }
+    .mini-archi .ma-box--paper rect:first-child { fill: var(--c-paper); }
+    .mini-archi .ma-box--white rect:first-child { fill: var(--c-bg-card); }
+    .mini-archi .ma-box--current rect:first-child { stroke: var(--c-success); stroke-width: 2; }
+
+    .mini-archi__legend { display: flex; gap: 16px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--c-border); font-size: 11px; color: var(--c-text-muted); }
+    .mini-archi__legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .mini-archi__legend .dot { width: 10px; height: 10px; border: 1px solid var(--c-border-strong); display: inline-block; }
+    .mini-archi__legend .dot--paper { background: var(--c-paper); }
+    .mini-archi__legend .dot--ink { background: var(--c-ink); border-color: var(--c-ink); }
+    .mini-archi__legend .dot--white { background: var(--c-bg-card); }
+    .mini-archi__legend .dot--gold { background: var(--c-accent); border-color: var(--c-accent); }
+    .mini-archi__legend .dot--success { background: var(--c-success); border-color: var(--c-success); border-radius: 50%; }
 
     /* RECO + ALERTS */
     .reco-list, .alert-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; }
