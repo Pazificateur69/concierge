@@ -361,7 +361,12 @@ onMounted(() => {
 .reviews__header em { color: var(--c-accent-deep); font-style: italic; }
 
 /* ─── COLOPHON ─── */
-.colophon { padding: var(--s-16) var(--s-8) var(--s-8); background: var(--c-ink); color: var(--c-paper); }
+.colophon {
+  padding: var(--s-16) var(--s-8) calc(var(--s-8) + 96px);
+  padding-bottom: max(calc(var(--s-8) + 96px), env(safe-area-inset-bottom, 0px) + 112px);
+  background: var(--c-ink); color: var(--c-paper);
+  position: relative; z-index: 1;
+}
 .colophon__row {
   display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr;
   gap: var(--s-12);
@@ -383,10 +388,12 @@ onMounted(() => {
 .colophon__bottom {
   display: flex; justify-content: space-between; align-items: center;
   max-width: 1280px; margin: 0 auto;
-  font-size: 12px; color: var(--c-text-soft);
+  font-size: 12px; color: rgba(245,240,232,0.55);
   letter-spacing: 0.04em;
+  flex-wrap: wrap; gap: var(--s-3);
 }
-.colophon__dymension { letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
+.colophon__bottom span { color: rgba(245,240,232,0.7); }
+.colophon__dymension { letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; color: var(--c-accent-soft) !important; }
 
 /* VIRTUAL TOUR */
 .vtour { padding: var(--s-12) var(--s-8); background: var(--c-bg); }

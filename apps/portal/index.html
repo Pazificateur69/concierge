@@ -427,9 +427,10 @@
 
   /* COLOPHON */
   .colophon {
-    padding: 56px 48px 32px;
+    padding: 56px 48px;
+    padding-bottom: max(48px, env(safe-area-inset-bottom, 0px) + 32px);
     background: var(--c-ink);
-    color: rgba(245,240,232,0.7);
+    color: rgba(245,240,232,0.85);
     font-size: 12px;
   }
   .colophon__row {
@@ -457,10 +458,12 @@
   .colophon__bottom {
     max-width: 1320px; margin: 24px auto 0;
     display: flex; justify-content: space-between; align-items: center;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
+    color: rgba(245,240,232,0.85);
+    flex-wrap: wrap; gap: 12px;
   }
-  .colophon__bottom-right { letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
+  .colophon__bottom-right { letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; color: var(--c-accent-soft); }
 
   /* LIVE STATS */
   .livestats { padding: 96px 32px 64px; background: var(--c-paper); border-top: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border); }

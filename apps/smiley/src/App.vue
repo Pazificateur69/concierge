@@ -572,7 +572,13 @@ function getOptionColor(value: number) {
 .thanks__cta:hover { background: var(--c-accent-deep); transform: translateY(-1px); }
 
 /* FOOTER */
-.foot { padding: 24px 48px; text-align: center; border-top: 1px solid var(--c-border); }
+.foot {
+  padding: 24px 48px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0px) + 16px);
+  text-align: center; border-top: 1px solid var(--c-border);
+  background: var(--c-bg-card);
+}
+.foot .eyebrow { color: var(--c-accent-deep); font-weight: 600; }
 
 /* MULTI-SURVEY SWITCHER */
 .survey-switch { margin: 24px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
