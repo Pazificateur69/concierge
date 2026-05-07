@@ -1,0 +1,50 @@
+name: Keep Render warm
+
+# Render free tier sleeps after 15 minutes of inactivity. Cold-start ~30-60s
+# is unacceptable in a demo context. This workflow pings every microservice's
+# /healthz every 10 minutes so the instance never falls asleep.
+#
+# Trigger manuel : Actions tab → Keep Render warm → Run workflow
+# Disable: just remove the cron schedule below.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping all health endpoints
+        run: |
+          set +e
+          GATEWAY="https://concierge-gateway.onrender.com"
+
+          # Hit gateway-level + each service through the proxy
+          ENDPOINTS=(
+            "$GATEWAY/healthz"
+            "$GATEWAY/auth/healthz"
+            "$GATEWAY/tenants/healthz"
+            "$GATEWAY/content/healthz"
+            "$GATEWAY/orders/healthz"
+            "$GATEWAY/surveys/healthz"
+          )
+
+          for url in "${ENDPOINTS[@]}"; do
+            # Up to 80s per endpoint — enough for a single cold-start
+            START=$(date +%s)
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 80 "$url" || echo "000")
+            DURATION=$(( $(date +%s) - START ))
+            if [[ "$STATUS" == "200" ]]; then
+              echo "OK   $url  ${DURATION}s"
+            else
+              echo "WARN $url  status=$STATUS  ${DURATION}s"
+            fi
+          done
+
+          echo "Warm-up cycle complete."
