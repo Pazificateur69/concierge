@@ -39,16 +39,17 @@ services:
       - fromGroup: concierge-shared
       - key: PORT
         value: 10000
+      # Render free tier doesn't expose private hostport networking — must use public HTTPS.
       - key: SERVICE_AUTH_URL
-        fromService: { type: web, name: concierge-auth, property: hostport }
+        value: https://concierge-auth.onrender.com
       - key: SERVICE_TENANT_URL
-        fromService: { type: web, name: concierge-tenant, property: hostport }
+        value: https://concierge-tenant.onrender.com
       - key: SERVICE_CONTENT_URL
-        fromService: { type: web, name: concierge-content, property: hostport }
+        value: https://concierge-content.onrender.com
       - key: SERVICE_ORDERS_URL
-        fromService: { type: web, name: concierge-orders, property: hostport }
+        value: https://concierge-orders.onrender.com
       - key: SERVICE_SURVEY_URL
-        fromService: { type: web, name: concierge-survey, property: hostport }
+        value: https://concierge-survey.onrender.com
 
   # ───────── auth-service ─────────
   - type: web

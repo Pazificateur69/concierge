@@ -23,13 +23,26 @@ export function setupProxies(app: Application) {
     next();
   });
 
+  // Render free tier blocks internal hostport networking — services must be reached
+  // via public HTTPS URLs. Use the env var when it's a valid HTTPS, otherwise fall
+  // back to the canonical Render service URL when running in production.
+  function resolveTarget(envValue: string | undefined, fallbackHttps: string, localPort: number): string {
+    const isProd = !!process.env.RENDER || process.env.NODE_ENV === 'production';
+    if (envValue && envValue.startsWith('https://')) return envValue;
+    if (isProd) return fallbackHttps;
+    return envValue || `http://localhost:${localPort}`;
+  }
+
   const routes: RouteConfig[] = [
-    { prefix: '/auth', target: process.env.SERVICE_AUTH_URL || 'http://localhost:3001' },
-    { prefix: '/tenants', target: process.env.SERVICE_TENANT_URL || 'http://localhost:3007' },
-    { prefix: '/content', target: process.env.SERVICE_CONTENT_URL || 'http://localhost:3002' },
-    { prefix: '/orders', target: process.env.SERVICE_ORDERS_URL || 'http://localhost:3003' },
-    { prefix: '/surveys', target: process.env.SERVICE_SURVEY_URL || 'http://localhost:3004' },
+    { prefix: '/auth',    target: resolveTarget(process.env.SERVICE_AUTH_URL,    'https://concierge-auth.onrender.com',    3001) },
+    { prefix: '/tenants', target: resolveTarget(process.env.SERVICE_TENANT_URL,  'https://concierge-tenant.onrender.com',  3007) },
+    { prefix: '/content', target: resolveTarget(process.env.SERVICE_CONTENT_URL, 'https://concierge-content.onrender.com', 3002) },
+    { prefix: '/orders',  target: resolveTarget(process.env.SERVICE_ORDERS_URL,  'https://concierge-orders.onrender.com',  3003) },
+    { prefix: '/surveys', target: resolveTarget(process.env.SERVICE_SURVEY_URL,  'https://concierge-survey.onrender.com',  3004) },
   ];
+
+  // eslint-disable-next-line no-console
+  console.log('[proxy] resolved upstream targets:\n' + routes.map(r => `  ${r.prefix.padEnd(10)} → ${r.target}`).join('\n'));
 
   for (const route of routes) {
     app.use(
@@ -38,6 +51,9 @@ export function setupProxies(app: Application) {
         target: route.target,
         changeOrigin: true,
         ws: true,
+        // Allow up to 90s for the upstream — covers cold-start on Render free tier.
+        proxyTimeout: 90_000,
+        timeout: 90_000,
         pathRewrite: (path) => `${route.prefix}${path}`,
         on: {
           proxyReq: (proxyReq, req) => {
