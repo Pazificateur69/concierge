@@ -23,13 +23,31 @@ export const API_URL = resolveApiUrl();
 
 export const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  // Render free tier cold-start can take 30-60s. We allow up to 60s.
+  timeout: 60000,
 });
 
 api.interceptors.response.use(
   (r) => r,
-  (e) => {
-    console.error('[API]', e?.response?.status, e?.response?.data);
-    return Promise.reject(e);
+  async (error) => {
+    const cfg: any = error.config || {};
+    cfg.__retryCount = cfg.__retryCount || 0;
+    const isTimeout = error.code === 'ECONNABORTED' || /timeout/i.test(error.message ?? '');
+    const isNetwork = !error.response;
+    if ((isTimeout || isNetwork) && cfg.__retryCount < 2) {
+      cfg.__retryCount += 1;
+      // Backoff: 800ms, 2s
+      await new Promise((r) => setTimeout(r, cfg.__retryCount === 1 ? 800 : 2000));
+      return api.request(cfg);
+    }
+    console.error('[API]', error?.response?.status, error?.response?.data || error.message);
+    return Promise.reject(error);
   },
 );
+
+// Warm-up ping: silently hits /healthz so cold-start latency is paid before the user clicks anything.
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    fetch(`${API_URL}/healthz`, { cache: 'no-store' }).catch(() => undefined);
+  }, 100);
+}

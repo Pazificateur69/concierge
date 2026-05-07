@@ -17,6 +17,8 @@ const { isWarning, countdown } = storeToRefs(idleStore);
 
 const showError = computed(() => !tenantStore.loading && !tenantStore.tenant && !!tenantStore.error);
 const showLoading = computed(() => tenantStore.loading || (!tenantStore.tenant && !tenantStore.error));
+const slowBoot = ref(false);
+let slowBootTimer: any = null;
 
 const nightMode = ref(false);
 const screensaverActive = ref(false);
@@ -67,7 +69,10 @@ function applyDirection(locale: string) {
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search);
   const slug = params.get('tenant') || import.meta.env.VITE_DEFAULT_TENANT || 'royal-lyon';
+  slowBootTimer = setTimeout(() => { slowBoot.value = true; }, 6000);
   await tenantStore.load(slug);
+  if (slowBootTimer) clearTimeout(slowBootTimer);
+  slowBoot.value = false;
 
   idleStore.start(() => {
     cartStore.clear();
@@ -102,7 +107,8 @@ function dismissScreensaver() {
       <div class="boot__mark">C</div>
       <span class="boot__brand serif italic">Concierge</span>
       <div class="boot__spinner"></div>
-      <span class="boot__hint">Préparation de votre expérience…</span>
+      <span class="boot__hint">{{ slowBoot ? 'Réveil du serveur en cours, quelques instants…' : 'Préparation de votre expérience…' }}</span>
+      <span v-if="slowBoot" class="boot__detail">Premier accès depuis un moment — Render rallume l'instance.</span>
     </div>
 
     <!-- Boot error -->

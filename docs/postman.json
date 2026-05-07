@@ -2,11 +2,11 @@
   "info": {
     "_postman_id": "concierge-api-v4",
     "name": "Concierge — API Gateway",
-    "description": "Collection Postman pour démontrer les endpoints publics et authentifiés. Définissez la variable {{baseUrl}} (ex. https://concierge-api-gateway.onrender.com) puis exécutez les requêtes.",
+    "description": "Collection Postman pour démontrer les endpoints publics et authentifiés. Définissez la variable {{baseUrl}} (ex. https://concierge-gateway.onrender.com) puis exécutez les requêtes.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "https://concierge-api-gateway.onrender.com" },
+    { "key": "baseUrl", "value": "https://concierge-gateway.onrender.com" },
     { "key": "tenantId", "value": "" },
     { "key": "tenantSlug", "value": "royal-lyon" },
     { "key": "accessToken", "value": "" }

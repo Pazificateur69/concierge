@@ -8,6 +8,14 @@ const params = new URLSearchParams(window.location.search);
 const queryApi = params.get('api');
 if (queryApi) sessionStorage.setItem('concierge_api', queryApi);
 const API_URL = queryApi || sessionStorage.getItem('concierge_api') || import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
+// Warm-up Render cold-start before any user interaction
+if (typeof window !== 'undefined') {
+  setTimeout(() => { fetch(`${API_URL}/healthz`, { cache: 'no-store' }).catch(() => undefined); }, 100);
+}
+
+// Configure axios timeout (Render free tier wakes up in ~30-60s)
+axios.defaults.timeout = 60000;
 const tenantSlug = params.get('tenant') || 'royal-lyon';
 const initialSurveySlug = params.get('survey') || 'satisfaction-checkout';
 const currentSurveySlug = ref(initialSurveySlug);
