@@ -4,13 +4,22 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import type { LoginResponse, Order, Survey, SurveyStats } from '@concierge/types';
 
+const PROD_GATEWAY = 'https://concierge-gateway.onrender.com';
 function resolveApi(): string {
   const params = new URLSearchParams(window.location.search);
   const queryApi = params.get('api');
   if (queryApi) sessionStorage.setItem('concierge_api', queryApi);
-  return queryApi || sessionStorage.getItem('concierge_api') || (window as any).__API__ || 'http://localhost:4000';
+  if (queryApi) return queryApi;
+  const session = sessionStorage.getItem('concierge_api');
+  if (session) return session;
+  const injected = (window as any).__API__;
+  const onProdHost = /\.(vercel|onrender)\.app|netlify\.app/.test(window.location.hostname);
+  if (injected && (!onProdHost || injected.includes('concierge-gateway.onrender.com'))) return injected;
+  if (onProdHost) return PROD_GATEWAY;
+  return injected || 'http://localhost:4000';
 }
 const API = resolveApi();
+console.info('[Concierge Admin] API base URL =', API);
 
 @Component({
   selector: 'app-root',

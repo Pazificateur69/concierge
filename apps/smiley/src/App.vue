@@ -4,17 +4,26 @@ import { onMounted, ref, computed, nextTick } from 'vue';
 import axios from 'axios';
 import type { Survey, Question, SurveyAnswer } from '@concierge/types';
 
+const PROD_GATEWAY = 'https://concierge-gateway.onrender.com';
 const params = new URLSearchParams(window.location.search);
 const queryApi = params.get('api');
 if (queryApi) sessionStorage.setItem('concierge_api', queryApi);
-const API_URL = queryApi || sessionStorage.getItem('concierge_api') || import.meta.env.VITE_API_URL || 'http://localhost:4000';
+function resolveApi() {
+  if (queryApi) return queryApi;
+  const session = sessionStorage.getItem('concierge_api');
+  if (session) return session;
+  const envUrl = import.meta.env.VITE_API_URL;
+  const onProdHost = /\.(vercel|onrender)\.app|netlify\.app/.test(location.hostname);
+  if (envUrl && (!onProdHost || envUrl.includes('concierge-gateway.onrender.com'))) return envUrl;
+  if (onProdHost) return PROD_GATEWAY;
+  return envUrl || 'http://localhost:4000';
+}
+const API_URL = resolveApi();
+console.info('[Concierge] API base URL =', API_URL);
 
-// Warm-up Render cold-start before any user interaction
 if (typeof window !== 'undefined') {
   setTimeout(() => { fetch(`${API_URL}/healthz`, { cache: 'no-store' }).catch(() => undefined); }, 100);
 }
-
-// Configure axios timeout (Render free tier wakes up in ~30-60s)
 axios.defaults.timeout = 60000;
 const tenantSlug = params.get('tenant') || 'royal-lyon';
 const initialSurveySlug = params.get('survey') || 'satisfaction-checkout';
