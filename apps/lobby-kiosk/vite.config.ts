@@ -29,11 +29,20 @@ export default defineConfig({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        navigateFallbackDenylist: [/^\/api/, /\/healthz$/, /\/readyz$/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.unsplash\.com/,
             handler: 'CacheFirst',
             options: { cacheName: 'unsplash-images', expiration: { maxAgeSeconds: 86400 * 30 } },
+          },
+          {
+            // Gateway calls = always live, never cached
+            urlPattern: /^https:\/\/concierge-gateway\.onrender\.com/,
+            handler: 'NetworkOnly',
           },
         ],
       },
