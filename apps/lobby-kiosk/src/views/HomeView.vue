@@ -190,7 +190,7 @@ onMounted(() => {
           <hr class="rule" />
           <div class="colophon__bottom">
             <span>© {{ new Date().getFullYear() }} {{ tenantStore.tenant?.name }} · Tous droits réservés</span>
-            <span class="colophon__dymension">Powered by Dymension</span>
+            <span class="colophon__dymension">Concierge — édition 2026</span>
           </div>
         </footer>
 

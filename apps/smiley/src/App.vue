@@ -490,7 +490,7 @@ function getOptionColor(value: number) {
       </main>
 
       <footer class="foot">
-        <span class="eyebrow">Concierge · Dymension</span>
+        <span class="eyebrow">Concierge — Plateforme hôtelière</span>
       </footer>
     </div>
   </ion-app>

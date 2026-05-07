@@ -7,7 +7,7 @@ import * as crypto from 'node:crypto';
  *
  * Background : the dedicated auth-service on Render free tier has been unreliable
  * during the V4 demo prep — the instance fails to wake from cold-start. To keep the
- * demo bullet-proof for the Dymension interview, the gateway exposes the same
+ * demo bullet-proof, the gateway exposes the same
  * /auth/login + /auth/refresh + /auth/me contract here, signs JWTs with the same
  * JWT_SECRET that every microservice validates, so the rest of the platform doesn't
  * notice the difference.
