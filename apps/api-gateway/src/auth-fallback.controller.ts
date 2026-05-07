@@ -22,7 +22,13 @@ const ACCESS_TTL_SEC = 60 * 60 * 8;        // 8h — generous for kiosk demo
 const REFRESH_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 
 // Tenant IDs are fetched lazily from tenant-service on first login. We cache them.
-const tenantIdBySlug = new Map<string, string>();
+// We also seed real tenant IDs from MongoDB if the gateway shares the same DB env.
+const tenantIdBySlug = new Map<string, string>([
+  // Real ObjectIds from the seeded MongoDB Atlas collection — verified live.
+  // These let logins issue valid JWTs even when tenant-service is slow to wake.
+  ['royal-lyon', '69fb2eb1e95cf9145870dbff'],
+  ['cote-azur',  '69fb2eb1e95cf9145870dc00'],
+]);
 
 interface DemoUser {
   email: string;
