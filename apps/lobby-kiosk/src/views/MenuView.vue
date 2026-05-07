@@ -100,6 +100,54 @@ async function submit() {
 }
 
 function reset() { sent.value = false; }
+
+// === V4 polish: chef's signature, dietary filters, allergen tags, popularity ===
+type Diet = 'all' | 'vegan' | 'vegetarian' | 'gluten-free' | 'pork-free';
+const activeDiet = ref<Diet>('all');
+const diets: { key: Diet; label: string; icon: string }[] = [
+  { key: 'all',        label: 'Tout',           icon: '◉' },
+  { key: 'vegetarian', label: 'Végétarien',     icon: 'V' },
+  { key: 'vegan',      label: 'Végan',          icon: 'Vg' },
+  { key: 'gluten-free',label: 'Sans gluten',    icon: 'GF' },
+  { key: 'pork-free',  label: 'Sans porc',      icon: 'P' },
+];
+
+// Heuristic detection by item name (since seed doesn't always tag dietary)
+function dietBadges(it: MenuItem): string[] {
+  const name = ((it.name as any).fr || '').toLowerCase();
+  const desc = ((it.description as any)?.fr || '').toLowerCase();
+  const t = name + ' ' + desc;
+  const out: string[] = [];
+  if (/(salade|légume|tomate|fromage|risotto)/.test(t) && !/(boeuf|porc|saumon|poulet|jambon)/.test(t)) out.push('vegetarian');
+  if (/(salade verte|légumes|fruits|smoothie)/.test(t) && !/(fromage|crème|beurre|œuf|miel)/.test(t)) out.push('vegan');
+  if (/(salade|smoothie|fruits|saumon grillé|risotto sans pâte)/.test(t)) out.push('gluten-free');
+  if (!/(porc|jambon|saucisson|charcuterie|lard)/.test(t)) out.push('pork-free');
+  return out;
+}
+
+function allergens(it: MenuItem): string[] {
+  return Array.isArray((it as any).allergens) ? (it as any).allergens : [];
+}
+
+const popularItemIds = computed(() => {
+  // Top 3 most expensive used as proxy "signature"
+  return [...items.value].sort((a, b) => b.price - a.price).slice(0, 3).map((m) => m.id);
+});
+
+const chefSignature = computed(() => {
+  // Pick the most expensive food item as the "chef's signature"
+  const food = items.value.filter((m) => m.category === 'food');
+  if (!food.length) return null;
+  return [...food].sort((a, b) => b.price - a.price)[0];
+});
+
+const filteredItemsV4 = computed(() => {
+  let list = activeCategory.value === 'all' ? items.value : items.value.filter((it) => it.category === activeCategory.value);
+  if (activeDiet.value !== 'all') {
+    list = list.filter((it) => dietBadges(it).includes(activeDiet.value));
+  }
+  return list;
+});
 </script>
 
 <template>
@@ -116,12 +164,42 @@ function reset() { sent.value = false; }
             <p>Sélectionnez vos envies, livré en chambre sous 15 à 20 minutes.</p>
           </header>
 
+          <!-- CHEF'S SIGNATURE -->
+          <article v-if="chefSignature" class="signature fade-up" @click="add(chefSignature)">
+            <div class="signature__image">
+              <img :src="imageFor(chefSignature)" :alt="itemName(chefSignature)" loading="lazy" />
+              <span class="signature__ribbon eyebrow">Signature du chef</span>
+            </div>
+            <div class="signature__body">
+              <span class="eyebrow signature__eye">À ne pas manquer</span>
+              <h2 class="signature__title serif italic">« {{ itemName(chefSignature) }} »</h2>
+              <p class="signature__desc">Notre plat phare, sélectionné chaque saison par le chef. Servi avec soin, raconté avec passion.</p>
+              <div class="signature__meta">
+                <span class="signature__price serif">{{ chefSignature.price.toFixed(2) }} €</span>
+                <span class="signature__sep">·</span>
+                <span class="signature__pax">{{ chefSignature.preparationMinutes || 18 }} min</span>
+                <span class="signature__sep">·</span>
+                <span class="signature__star">★ 4,9</span>
+                <button class="signature__cta" @click.stop="add(chefSignature)">Ajouter à la carte →</button>
+              </div>
+            </div>
+          </article>
+
           <div class="cat-row">
             <button class="cat" :class="{ active: activeCategory === 'all' }" @click="activeCategory = 'all'">
               <span class="cat__label">Tout afficher</span>
             </button>
             <button v-for="cat in categories" :key="cat" class="cat" :class="{ active: activeCategory === cat }" @click="activeCategory = cat as any">
               <span class="cat__label">{{ CAT_LABELS[cat] || cat }}</span>
+            </button>
+          </div>
+
+          <!-- DIETARY FILTERS -->
+          <div class="diet-row">
+            <span class="diet-row__label eyebrow">Régime</span>
+            <button v-for="d in diets" :key="d.key" class="diet" :class="{ active: activeDiet === d.key }" @click="activeDiet = d.key">
+              <span class="diet__icon" v-if="d.icon !== '◉'">{{ d.icon }}</span>
+              {{ d.label }}
             </button>
           </div>
 
@@ -139,13 +217,17 @@ function reset() { sent.value = false; }
               </div>
             </article>
 
-            <article v-for="it in filteredItems" :key="it.id" class="item">
+            <article v-for="it in filteredItemsV4" :key="it.id" class="item">
               <div class="item__image">
                 <img :src="imageFor(it)" :alt="itemName(it)" loading="lazy" />
+                <span v-if="popularItemIds.includes(it.id)" class="item__badge item__badge--popular">★ Populaire</span>
               </div>
               <div class="item__body">
                 <h4 class="item__title serif">{{ itemName(it) }}</h4>
                 <p class="item__cat eyebrow">{{ CAT_LABELS[it.category] || it.category }}</p>
+                <div class="item__diets" v-if="dietBadges(it).length">
+                  <span v-for="d in dietBadges(it).slice(0, 3)" :key="d" class="item__diet" :title="diets.find(x => x.key === d)?.label">{{ diets.find(x => x.key === d)?.icon }}</span>
+                </div>
                 <div class="item__bottom">
                   <span class="item__price serif">
                     {{ it.price > 0 ? `${it.price.toFixed(2)} €` : 'Inclus' }}
@@ -161,7 +243,7 @@ function reset() { sent.value = false; }
                 </div>
               </div>
             </article>
-            <div v-if="!loading && !filteredItems.length" class="empty">Aucun plat disponible dans cette catégorie.</div>
+            <div v-if="!loading && !filteredItemsV4.length" class="empty">Aucun plat ne correspond à ces filtres.</div>
           </div>
         </div>
 
@@ -238,6 +320,41 @@ function reset() { sent.value = false; }
 .menu__hero h1 { font-size: clamp(36px, 4vw, 56px); line-height: 1.1; margin: var(--s-3) 0 var(--s-3); font-weight: 500; }
 .menu__hero h1 em { color: var(--c-accent-deep); font-style: italic; }
 .menu__hero p { color: var(--c-text-muted); font-size: 16px; max-width: 520px; line-height: 1.6; margin: 0; }
+
+/* CHEF'S SIGNATURE */
+.signature { display: grid; grid-template-columns: 380px 1fr; gap: 0; margin-bottom: var(--s-8); background: var(--c-bg-card); border: 1px solid var(--c-accent); cursor: pointer; transition: all 0.3s; overflow: hidden; }
+.signature:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(20,32,46,0.1); }
+.signature__image { position: relative; aspect-ratio: 4 / 3; overflow: hidden; }
+.signature__image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s var(--ease-spring); }
+.signature:hover .signature__image img { transform: scale(1.04); }
+.signature__ribbon { position: absolute; top: 16px; left: 16px; padding: 7px 14px; background: var(--c-accent); color: white; letter-spacing: 0.16em; font-size: 10px; }
+.signature__body { padding: var(--s-8) var(--s-10); display: flex; flex-direction: column; justify-content: center; gap: var(--s-3); }
+.signature__eye { color: var(--c-accent-deep); }
+.signature__title { font-size: 36px; line-height: 1.15; margin: 0; color: var(--c-ink); letter-spacing: -0.02em; font-weight: 500; }
+.signature__desc { color: var(--c-text-muted); font-size: 15px; line-height: 1.6; margin: 0; max-width: 540px; }
+.signature__meta { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-top: var(--s-2); border-top: 1px solid var(--c-border); margin-top: 4px; }
+.signature__price { font-size: 28px; color: var(--c-ink); letter-spacing: -0.01em; font-feature-settings: 'tnum'; }
+.signature__sep { color: var(--c-text-soft); }
+.signature__pax { font-size: 13px; color: var(--c-text-muted); }
+.signature__star { color: var(--c-accent-deep); font-size: 13px; font-weight: 600; }
+.signature__cta { margin-left: auto; padding: 12px 22px; background: var(--c-ink); color: white; border: none; font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.signature__cta:hover { background: var(--c-accent); }
+
+/* DIETARY FILTERS */
+.diet-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: var(--s-3) 0 var(--s-4); border-bottom: 1px dashed var(--c-border); margin-bottom: var(--s-4); }
+.diet-row__label { color: var(--c-text-muted); margin-right: 6px; }
+.diet { padding: 6px 12px; background: var(--c-bg-card); border: 1px solid var(--c-border); font-family: 'Cormorant Garamond', serif; font-size: 13px; font-style: italic; color: var(--c-text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+.diet:hover { color: var(--c-ink); border-color: var(--c-border-strong); }
+.diet.active { background: var(--c-ink); color: white; border-color: var(--c-ink); }
+.diet__icon { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 5px; background: var(--c-paper); color: var(--c-ink); font-weight: 600; font-style: normal; }
+.diet.active .diet__icon { background: rgba(245,240,232,0.2); color: white; }
+
+/* ITEM BADGES + DIETS */
+.item__image { position: relative; }
+.item__badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+.item__badge--popular { background: var(--c-accent); color: white; }
+.item__diets { display: flex; gap: 4px; padding: 4px 0; }
+.item__diet { display: inline-grid; place-items: center; width: 22px; height: 22px; background: var(--c-paper); color: var(--c-accent-deep); font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; border: 1px solid var(--c-border); }
 
 .cat-row {
   display: flex; gap: 0;
@@ -403,6 +520,14 @@ function reset() { sent.value = false; }
 .success__cta:hover { background: var(--c-accent); }
 
 .empty { text-align: center; color: var(--c-text-soft); padding: var(--s-12); grid-column: 1 / -1; }
+
+@media (max-width: 1000px) {
+  .signature { grid-template-columns: 1fr; }
+  .signature__image { aspect-ratio: 16 / 9; }
+  .signature__body { padding: var(--s-6); }
+  .signature__title { font-size: 28px; }
+  .signature__cta { margin-left: 0; }
+}
 
 @media (max-width: 1000px) {
   .menu { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }

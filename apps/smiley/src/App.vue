@@ -158,6 +158,82 @@ async function flushQueue() {
 function reset() { currentQuestion.value = 0; answers.value = []; step.value = 'question'; }
 function reload() { window.location.reload(); }
 
+// === Voucher + share + confetti ===
+const copied = ref(false);
+const voucherCode = computed(() => {
+  // Deterministic code based on day + survey to feel real
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const seed = currentSurveySlug.value.replace(/[^a-z]/gi, '').slice(0, 4).toUpperCase().padEnd(4, 'X');
+  return `LOYAL-${seed}-${stamp.slice(2)}`;
+});
+const googleReviewUrl = computed(() => `https://search.google.com/local/writereview?placeid=ChIJa${tenantSlug.replace(/-/g, '').padEnd(10, 'X')}`);
+
+async function copyVoucher() {
+  try {
+    await navigator.clipboard.writeText(voucherCode.value);
+    copied.value = true;
+    setTimeout(() => (copied.value = false), 2000);
+  } catch {
+    copied.value = false;
+  }
+}
+
+// === Confetti (gold particle shower on thanks screen) ===
+const confettiPieces = ref<{ x: number; y: number; vx: number; vy: number; rot: number; vrot: number; color: string; size: number }[]>([]);
+const confettiCanvas = ref<HTMLCanvasElement | null>(null);
+let confettiTimer: any = null;
+
+function fireConfetti() {
+  const colors = ['#b8985a', '#8e7138', '#d6bd87', '#f5f0e8', '#36644a'];
+  const pieces: any[] = [];
+  for (let i = 0; i < 90; i++) {
+    pieces.push({
+      x: window.innerWidth / 2 + (Math.random() - 0.5) * 240,
+      y: window.innerHeight / 3 - 80,
+      vx: (Math.random() - 0.5) * 12,
+      vy: -8 - Math.random() * 6,
+      rot: Math.random() * 360,
+      vrot: (Math.random() - 0.5) * 12,
+      color: colors[i % colors.length],
+      size: 4 + Math.random() * 7,
+    });
+  }
+  confettiPieces.value = pieces;
+  if (confettiTimer) clearInterval(confettiTimer);
+  const start = Date.now();
+  confettiTimer = setInterval(() => {
+    const elapsed = Date.now() - start;
+    confettiPieces.value = confettiPieces.value.map((p) => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.32, rot: p.rot + p.vrot }));
+    drawConfetti();
+    if (elapsed > 2400) {
+      clearInterval(confettiTimer); confettiTimer = null;
+      confettiPieces.value = [];
+    }
+  }, 16);
+}
+function drawConfetti() {
+  const canvas = confettiCanvas.value;
+  if (!canvas) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const p of confettiPieces.value) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate((p.rot * Math.PI) / 180);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.8);
+    ctx.restore();
+  }
+}
+
+// Trigger confetti when arriving on thanks screen
+import { watch } from 'vue';
+watch(step, (s) => { if (s === 'thanks') setTimeout(fireConfetti, 300); });
+
 async function switchSurvey(slug: string) {
   currentSurveySlug.value = slug;
   step.value = 'loading';
@@ -352,6 +428,8 @@ function getOptionColor(value: number) {
 
         <!-- THANKS -->
         <div v-if="step === 'thanks'" class="thanks">
+          <canvas v-if="confettiPieces.length" ref="confettiCanvas" class="thanks__confetti"></canvas>
+
           <span class="eyebrow">Merci</span>
           <svg viewBox="0 0 80 80" width="64" height="64" class="thanks__check" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="40" cy="40" r="38" stroke-dasharray="240" stroke-dashoffset="0" />
@@ -363,6 +441,31 @@ function getOptionColor(value: number) {
           </h2>
           <hr class="thanks__rule" />
           <p class="thanks__desc">Bon voyage, et au plaisir de vous accueillir à nouveau.</p>
+
+          <!-- Loyalty voucher reward -->
+          <div class="voucher fade-up" style="animation-delay: 600ms">
+            <div class="voucher__corner voucher__corner--tl"></div>
+            <div class="voucher__corner voucher__corner--tr"></div>
+            <div class="voucher__corner voucher__corner--bl"></div>
+            <div class="voucher__corner voucher__corner--br"></div>
+            <span class="eyebrow voucher__eye">En remerciement</span>
+            <h3 class="voucher__title serif italic">— 10 % sur votre prochain séjour</h3>
+            <div class="voucher__code mono">{{ voucherCode }}</div>
+            <p class="voucher__hint">Présentez ce code à la réception lors de votre prochaine réservation directe. Valable 12 mois.</p>
+          </div>
+
+          <!-- Share on social -->
+          <div class="share fade-up" style="animation-delay: 800ms">
+            <span class="eyebrow">Partagez votre expérience</span>
+            <div class="share__row">
+              <a :href="googleReviewUrl" target="_blank" rel="noopener" class="share__btn">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+                Avis Google
+              </a>
+              <a href="https://tripadvisor.com" target="_blank" rel="noopener" class="share__btn">TripAdvisor ↗</a>
+              <button class="share__btn" @click="copyVoucher">{{ copied ? 'Copié ✓' : 'Copier le code' }}</button>
+            </div>
+          </div>
 
           <!-- Multi-survey switcher -->
           <div class="survey-switch">
@@ -579,6 +682,37 @@ function getOptionColor(value: number) {
   background: var(--c-bg-card);
 }
 .foot .eyebrow { color: var(--c-accent-deep); font-weight: 600; }
+
+/* THANKS — VOUCHER + SHARE + CONFETTI */
+.thanks { position: relative; }
+.thanks__confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+
+.voucher {
+  position: relative;
+  margin: 32px auto 24px;
+  max-width: 460px; padding: 32px 40px;
+  background: linear-gradient(135deg, var(--c-paper) 0%, var(--c-paper-soft) 100%);
+  border: 1px dashed var(--c-accent-deep);
+  text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.voucher__corner { position: absolute; width: 14px; height: 14px; border: 1.5px solid var(--c-accent-deep); }
+.voucher__corner--tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.voucher__corner--tr { top: -1px; right: -1px; border-left: none; border-bottom: none; }
+.voucher__corner--bl { bottom: -1px; left: -1px; border-right: none; border-top: none; }
+.voucher__corner--br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+.voucher__eye { color: var(--c-accent-deep); }
+.voucher__title { font-size: 26px; font-weight: 500; color: var(--c-ink); margin: 4px 0; line-height: 1.2; letter-spacing: -0.01em; }
+.voucher__code { font-size: 22px; letter-spacing: 0.18em; color: var(--c-ink); padding: 12px 24px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); margin: 8px 0; }
+.voucher__hint { color: var(--c-text-muted); font-size: 12px; line-height: 1.5; max-width: 320px; margin: 0; }
+
+.share { margin: 16px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.share__row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.share__btn { padding: 10px 18px; background: var(--c-bg-card); border: 1px solid var(--c-border-strong); color: var(--c-ink); font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+.share__btn:hover { background: var(--c-ink); color: white; border-color: var(--c-ink); }
+.share__btn svg { color: var(--c-accent); }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.fade-up { animation: fadeUp 0.6s cubic-bezier(0.32, 0.72, 0, 1) both; }
 
 /* MULTI-SURVEY SWITCHER */
 .survey-switch { margin: 24px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
