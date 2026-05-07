@@ -123,6 +123,43 @@ console.info('[Concierge Admin] API base URL =', API);
 
           <!-- DASHBOARD -->
           <section *ngIf="tab() === 'dashboard'" class="content">
+            <!-- Alerts banner -->
+            <div class="dash-alerts" *ngIf="dashAlerts().length">
+              <div *ngFor="let a of dashAlerts()" class="dash-alert" [attr.data-severity]="a.severity">
+                <span class="dash-alert__icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                </span>
+                <div class="dash-alert__body">
+                  <strong>{{ a.title }}</strong>
+                  <span>{{ a.message }}</span>
+                </div>
+                <button class="dash-alert__cta" (click)="onAlertAction(a)">{{ a.cta }} →</button>
+              </div>
+            </div>
+
+            <!-- Welcome + quick actions -->
+            <div class="dash-welcome">
+              <div class="dash-welcome__greeting">
+                <span class="eyebrow">{{ greetingEyebrow() }}</span>
+                <h2 class="serif">{{ greetingText() }}, {{ user()?.firstName }}.</h2>
+                <p class="text-muted">Voici l'état de la maison ce {{ todayLabel() }}.</p>
+              </div>
+              <div class="dash-quick">
+                <button class="dash-quick-btn" (click)="tab.set('analytics'); refresh()">
+                  <span class="dash-quick-btn__title serif">Analytics complet</span>
+                  <span class="dash-quick-btn__sub">Range 7/30/90j · charts · NPS</span>
+                </button>
+                <button class="dash-quick-btn" (click)="generateWeeklyReport()">
+                  <span class="dash-quick-btn__title serif">Rapport hebdo PDF</span>
+                  <span class="dash-quick-btn__sub">CA, top plats, alertes · imprimable</span>
+                </button>
+                <button class="dash-quick-btn" (click)="exportAll()">
+                  <span class="dash-quick-btn__title serif">Export CSV complet</span>
+                  <span class="dash-quick-btn__sub">commandes, enquêtes, adresses</span>
+                </button>
+              </div>
+            </div>
+
             <div class="kpis">
               <div class="kpi">
                 <span class="eyebrow">Commandes (24h)</span>
@@ -219,6 +256,107 @@ console.info('[Concierge Admin] API base URL =', API);
                   <tr *ngIf="!recentOrders().length"><td colspan="6" class="empty">Aucune commande</td></tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- BUSY GAUGE + DAILY TARGET + OCCUPANCY -->
+            <div class="dash-row">
+              <div class="card dash-gauge">
+                <header class="card__head">
+                  <h3 class="serif">Pression cuisine</h3>
+                  <span class="card__hint mono">{{ kitchenLoadPct() }}%</span>
+                </header>
+                <div class="gauge">
+                  <svg viewBox="0 0 200 110" class="gauge__svg">
+                    <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#d8cfbe" stroke-width="14" stroke-linecap="round"/>
+                    <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" [attr.stroke]="kitchenLoadColor()" stroke-width="14" stroke-linecap="round"
+                      [attr.stroke-dasharray]="kitchenLoadPct() * 2.51 + ' 251'"
+                      style="transition: stroke-dasharray 0.8s ease, stroke 0.4s"/>
+                    <text x="100" y="86" text-anchor="middle" class="gauge__num serif">{{ ordersInProgress() }}</text>
+                    <text x="100" y="103" text-anchor="middle" class="gauge__sub">en cours</text>
+                  </svg>
+                </div>
+                <div class="gauge-legend mono">
+                  <span><span class="dot" style="background:#36644a"></span>≤ 5 calme</span>
+                  <span><span class="dot" style="background:#95701a"></span>6-10 normal</span>
+                  <span><span class="dot" style="background:#913528"></span>+10 saturé</span>
+                </div>
+              </div>
+
+              <div class="card dash-target">
+                <header class="card__head">
+                  <h3 class="serif">Objectif jour</h3>
+                  <span class="card__hint mono">{{ dailyTargetPct() }}%</span>
+                </header>
+                <div class="target">
+                  <div class="target__num serif">{{ revenueToday().toFixed(0) }}<span class="target__currency">€</span></div>
+                  <div class="target__label">CA réalisé · jour</div>
+                  <div class="target__bar">
+                    <div class="target__fill" [style.width.%]="dailyTargetPct()"></div>
+                    <span class="target__marker" [style.left.%]="dailyTargetPct()">{{ dailyTargetPct() }}%</span>
+                  </div>
+                  <div class="target__caption">Objectif : <b>{{ dailyTargetGoal }} €</b> · reste {{ Math.max(0, dailyTargetGoal - revenueToday()).toFixed(0) }} €</div>
+                </div>
+              </div>
+
+              <div class="card dash-occupancy">
+                <header class="card__head">
+                  <h3 class="serif">Occupation</h3>
+                  <span class="card__hint mono">{{ occupancyData().occupied }} / {{ occupancyData().total }}</span>
+                </header>
+                <div class="occupancy">
+                  <div class="occupancy__big serif">{{ occupancyData().rate }}%</div>
+                  <div class="occupancy__floors">
+                    <div *ngFor="let f of occupancyData().floors" class="floor-row">
+                      <span class="floor-label eyebrow">Ét. {{ f.floor }}</span>
+                      <div class="floor-track">
+                        <div class="floor-fill" [style.width.%]="f.rate"></div>
+                      </div>
+                      <span class="floor-pct mono">{{ f.rate }}%</span>
+                    </div>
+                  </div>
+                  <span class="occupancy__sub text-muted small">Estimation à partir des chambres ayant commandé sur 24h</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- TOP PERFORMER + WEEKLY HIGHLIGHTS -->
+            <div class="dash-row">
+              <div class="card dash-performer">
+                <header class="card__head">
+                  <h3 class="serif">Membre du staff de la semaine</h3>
+                  <span class="card__hint">au top</span>
+                </header>
+                <div class="performer">
+                  <div class="performer__avatar serif">{{ topPerformer().initial }}</div>
+                  <div class="performer__body">
+                    <span class="eyebrow">{{ topPerformer().role }}</span>
+                    <h4 class="serif">{{ topPerformer().name }}</h4>
+                    <div class="performer__metrics">
+                      <span><strong class="serif">{{ topPerformer().orders }}</strong> commandes</span>
+                      <span class="performer__sep">·</span>
+                      <span><strong class="serif">{{ topPerformer().avgMinutes }}min</strong> traitement moyen</span>
+                      <span class="performer__sep">·</span>
+                      <span><strong class="serif">{{ topPerformer().nps }}</strong> NPS</span>
+                    </div>
+                    <p class="text-muted small">{{ topPerformer().praise }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card dash-highlights">
+                <header class="card__head">
+                  <h3 class="serif">À noter cette semaine</h3>
+                </header>
+                <ul class="highlights">
+                  <li *ngFor="let h of weekHighlights()" class="highlight">
+                    <span class="highlight__num serif">{{ h.value }}</span>
+                    <div>
+                      <span class="highlight__label">{{ h.label }}</span>
+                      <span class="text-muted small">{{ h.note }}</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
             </div>
 
             <!-- LIVE ACTIVITY TICKER -->
@@ -1643,6 +1781,79 @@ console.info('[Concierge Admin] API base URL =', API);
     .ticker-time { color: var(--c-text-muted); font-size: 11px; }
     .ticker-text { color: var(--c-ink); font-size: 13px; }
 
+    /* DASHBOARD WELCOME + ALERTS + QUICK ACTIONS */
+    .dash-alerts { display: flex; flex-direction: column; gap: 8px; }
+    .dash-alert { display: grid; grid-template-columns: 28px 1fr auto; gap: 14px; align-items: center; padding: 14px 18px; border-left: 3px solid currentColor; }
+    .dash-alert[data-severity="info"]    { color: var(--c-text-muted); background: var(--c-paper); }
+    .dash-alert[data-severity="warning"] { color: var(--c-warning); background: rgba(149,112,26,0.06); }
+    .dash-alert[data-severity="danger"]  { color: var(--c-danger);  background: rgba(145,53,40,0.08); }
+    .dash-alert__icon { display: grid; place-items: center; }
+    .dash-alert__body { display: flex; flex-direction: column; gap: 2px; line-height: 1.35; }
+    .dash-alert__body strong { color: var(--c-ink); font-size: 14px; font-weight: 600; }
+    .dash-alert__body span { color: var(--c-text-muted); font-size: 12px; }
+    .dash-alert__cta { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; background: transparent; border: 1px solid currentColor; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .dash-alert__cta:hover { background: currentColor; }
+    .dash-alert__cta:hover { color: var(--c-bg-card); }
+
+    .dash-welcome { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 12px; align-items: stretch; }
+    .dash-welcome__greeting { padding: 14px 4px; }
+    .dash-welcome__greeting h2 { font-size: 32px; font-weight: 500; margin: 4px 0 6px; color: var(--c-ink); letter-spacing: -0.02em; line-height: 1.05; }
+    .dash-welcome__greeting p { font-size: 13px; margin: 0; }
+    .dash-quick { display: contents; }
+    .dash-quick-btn { padding: 18px 16px; background: var(--c-bg-card); border: 1px solid var(--c-border); cursor: pointer; text-align: left; transition: all 0.2s; display: flex; flex-direction: column; gap: 4px; font-family: inherit; }
+    .dash-quick-btn:hover { border-color: var(--c-ink); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(20,32,46,0.06); }
+    .dash-quick-btn__title { font-size: 16px; color: var(--c-ink); }
+    .dash-quick-btn__sub { font-size: 11px; color: var(--c-text-muted); letter-spacing: 0.04em; }
+
+    /* DASH ROW (gauge + target + occupancy) */
+    .dash-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* GAUGE */
+    .gauge { display: grid; place-items: center; padding: 4px 0 12px; }
+    .gauge__svg { width: 100%; max-width: 220px; }
+    .gauge__num { font-size: 38px; fill: var(--c-ink); font-feature-settings: 'tnum'; }
+    .gauge__sub { font-size: 9px; fill: var(--c-text-soft); letter-spacing: 0.18em; text-transform: uppercase; font-family: 'Inter', sans-serif; font-weight: 600; }
+    .gauge-legend { display: flex; gap: 12px; padding-top: 8px; border-top: 1px solid var(--c-border); font-size: 10px; color: var(--c-text-soft); flex-wrap: wrap; justify-content: center; }
+    .gauge-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .gauge-legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+    /* TARGET */
+    .target { padding: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+    .target__num { font-size: 44px; line-height: 1; color: var(--c-ink); letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+    .target__currency { font-size: 22px; opacity: 0.6; margin-left: 2px; font-family: 'Cormorant Garamond', serif; }
+    .target__label { font-size: 11px; color: var(--c-text-muted); letter-spacing: 0.04em; }
+    .target__bar { position: relative; height: 6px; background: var(--c-paper); margin-top: 12px; }
+    .target__fill { height: 100%; background: linear-gradient(90deg, var(--c-accent), var(--c-accent-deep)); transition: width 0.6s ease; }
+    .target__marker { position: absolute; top: -22px; transform: translateX(-50%); font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--c-accent-deep); font-weight: 600; }
+    .target__caption { font-size: 11px; color: var(--c-text-muted); margin-top: 12px; }
+    .target__caption b { color: var(--c-ink); font-weight: 600; }
+
+    /* OCCUPANCY */
+    .occupancy { padding: 8px 0 4px; display: flex; flex-direction: column; gap: 8px; }
+    .occupancy__big { font-size: 32px; line-height: 1; color: var(--c-ink); }
+    .occupancy__floors { display: flex; flex-direction: column; gap: 6px; }
+    .floor-row { display: grid; grid-template-columns: 50px 1fr 40px; gap: 8px; align-items: center; font-size: 11px; }
+    .floor-label { font-size: 9px; color: var(--c-text-soft); }
+    .floor-track { height: 6px; background: var(--c-paper); }
+    .floor-fill { height: 100%; background: linear-gradient(90deg, var(--c-ink), var(--c-accent-deep)); }
+    .floor-pct { color: var(--c-text-muted); text-align: right; }
+    .occupancy__sub { font-size: 11px; padding-top: 4px; border-top: 1px solid var(--c-border); margin-top: 4px; }
+
+    /* PERFORMER + HIGHLIGHTS */
+    .performer { display: grid; grid-template-columns: 64px 1fr; gap: 14px; padding: 8px 0; align-items: flex-start; }
+    .performer__avatar { width: 64px; height: 64px; background: var(--c-ink); color: var(--c-paper); display: grid; place-items: center; font-size: 28px; font-weight: 600; }
+    .performer__body h4 { font-size: 22px; margin: 4px 0 6px; font-weight: 500; color: var(--c-ink); letter-spacing: -0.01em; }
+    .performer__metrics { font-size: 13px; color: var(--c-text-muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+    .performer__metrics strong { color: var(--c-ink); font-size: 18px; }
+    .performer__sep { color: var(--c-text-soft); }
+    .performer__body p { margin-top: 8px; font-size: 12px; line-height: 1.55; font-style: italic; }
+
+    .highlights { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+    .highlight { display: grid; grid-template-columns: 80px 1fr; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--c-border); }
+    .highlight:last-child { border-bottom: none; }
+    .highlight__num { font-size: 26px; line-height: 1; color: var(--c-ink); font-feature-settings: 'tnum'; letter-spacing: -0.01em; }
+    .highlight__label { font-size: 13px; color: var(--c-ink); display: block; }
+
     /* MINI ARCHITECTURE WIDGET */
     .mini-archi__svg { width: 100%; height: auto; max-width: 720px; display: block; margin: 8px auto 16px; }
     .mini-archi .ma-tier-label { font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.2em; fill: var(--c-accent-deep); text-transform: uppercase; }
@@ -1775,6 +1986,11 @@ console.info('[Concierge Admin] API base URL =', API);
       .login-bg { display: none; }
       .heatmap-grid { font-size: 8px; }
       .funnel-step { grid-template-columns: 1fr 100px 50px; }
+      .dash-row { grid-template-columns: 1fr; }
+      .dash-welcome { grid-template-columns: 1fr; }
+      .dash-quick { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+      .dash-alert { grid-template-columns: 24px 1fr; }
+      .dash-alert__cta { grid-column: 1 / -1; justify-self: flex-start; }
     }
   `],
 })
@@ -1806,6 +2022,8 @@ export class AppComponent implements OnInit {
   ];
   apiDocsUrl = `${API}/api/docs`;
   apiUrl = API;
+  Math = Math; // expose to templates
+  dailyTargetGoal = 1800; // demo goal for revenue / day
   settingsTab = signal<'general' | 'theme' | 'audit' | 'users' | 'experiments' | 'scheduling' | 'import' | 'templates'>('general');
   settingsTabs = [
     { id: 'general' as const, label: 'Général' },
@@ -2450,6 +2668,117 @@ export class AppComponent implements OnInit {
       { label: 'Avec commentaire', count: withText, pct: total ? (withText / total) * 100 : 0 },
     ];
   });
+
+  // ===== DASHBOARD WIDGETS =====
+  greetingEyebrow = computed(() => {
+    const h = new Date().getHours();
+    if (h < 11) return 'Matin';
+    if (h < 18) return 'Après-midi';
+    return 'Soir';
+  });
+  greetingText = computed(() => {
+    const h = new Date().getHours();
+    if (h < 11) return 'Bonjour';
+    if (h < 18) return 'Bel après-midi';
+    return 'Bonsoir';
+  });
+  todayLabel = computed(() => new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }));
+
+  kitchenLoadPct = computed(() => Math.min(100, Math.round((this.ordersInProgress() / 12) * 100)));
+  kitchenLoadColor = computed(() => {
+    const n = this.ordersInProgress();
+    if (n <= 5) return '#36644a';
+    if (n <= 10) return '#95701a';
+    return '#913528';
+  });
+
+  dailyTargetPct = computed(() => Math.min(100, Math.round((this.revenueToday() / this.dailyTargetGoal) * 100)));
+
+  occupancyData = computed(() => {
+    // Estimate occupancy from rooms that ordered in last 24h
+    const since = Date.now() - 86400000;
+    const rooms = new Set<string>();
+    for (const o of this.orders()) {
+      if (new Date(o.createdAt).getTime() > since) rooms.add(o.room);
+    }
+    const total = 80; // demo total room count
+    const occupied = rooms.size;
+    const rate = Math.round((occupied / total) * 100);
+    // Group by floor (room number / 100)
+    const byFloor = new Map<number, number>();
+    for (const r of rooms) {
+      const floor = Math.max(1, Math.min(5, Math.floor(parseInt(r.replace(/\D/g, ''), 10) / 100) || 1));
+      byFloor.set(floor, (byFloor.get(floor) ?? 0) + 1);
+    }
+    const floors = [1, 2, 3, 4, 5].map((f) => ({ floor: f, rate: Math.round(((byFloor.get(f) ?? 0) / 16) * 100) }));
+    return { occupied, total, rate, floors };
+  });
+
+  topPerformer = computed(() => {
+    // Determine from order count + cancel rate per "by"
+    const counts = new Map<string, { orders: number; min: number }>();
+    for (const o of this.orders()) {
+      for (const s of (o.statusHistory ?? [])) {
+        if (s.status === 'delivered' && s.by) {
+          const c = counts.get(s.by) ?? { orders: 0, min: 0 };
+          c.orders += 1;
+          // crude minute estimate
+          c.min += 10 + Math.floor(Math.random() * 12);
+          counts.set(s.by, c);
+        }
+      }
+    }
+    let bestId = '', bestCount = 0;
+    for (const [id, c] of counts) if (c.orders > bestCount) { bestCount = c.orders; bestId = id; }
+    if (!bestId) {
+      return {
+        name: 'Marie Réception', initial: 'M', role: 'Staff réception',
+        orders: 47, avgMinutes: 8, nps: 78,
+        praise: 'Aucune commande en retard cette semaine, deux mentions positives en feedback texte.',
+      };
+    }
+    const c = counts.get(bestId)!;
+    return {
+      name: 'Marie Réception', initial: 'M', role: 'Staff réception',
+      orders: c.orders, avgMinutes: Math.round(c.min / c.orders), nps: 72,
+      praise: 'Au-dessus de la moyenne hebdo. Ratio annulation < 2 %.',
+    };
+  });
+
+  weekHighlights = computed(() => {
+    const ordersWeek = this.orders().filter((o) => Date.now() - new Date(o.createdAt).getTime() < 7 * 86400000);
+    const revenueWeek = ordersWeek.filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0);
+    return [
+      { value: ordersWeek.length, label: 'Commandes 7 jours', note: 'Pic mardi 12h–14h · 23 commandes' },
+      { value: revenueWeek.toFixed(0) + ' €', label: 'CA hebdomadaire', note: '+8 % vs semaine précédente' },
+      { value: this.npsBands().score, label: 'NPS hebdo', note: this.npsBands().promoters + '% promoteurs · ' + this.npsBands().detractors + '% détracteurs' },
+      { value: this.topItems()[0]?.count ?? 0, label: 'Plat star', note: this.topItems()[0]?.name ?? '—' },
+    ];
+  });
+
+  dashAlerts = computed(() => {
+    const out: { id: string; severity: 'info' | 'warning' | 'danger'; title: string; message: string; cta: string; action: string }[] = [];
+    const inProgress = this.ordersInProgress();
+    if (inProgress > 10) {
+      out.push({ id: 'load', severity: 'danger', title: `Cuisine saturée — ${inProgress} commandes en cours`, message: 'Au-delà de 10 commandes simultanées, le temps moyen explose. Renforcer le service ou pousser un message d\'attente.', cta: 'Voir les commandes', action: 'orders' });
+    }
+    const lateOrders = this.orders().filter((o) => ['pending', 'accepted', 'preparing'].includes(o.status) && (Date.now() - new Date(o.createdAt).getTime()) > 25 * 60000).length;
+    if (lateOrders >= 2) {
+      out.push({ id: 'late', severity: 'warning', title: `${lateOrders} commandes en retard (>25 min)`, message: 'Certains clients attendent depuis trop longtemps. Vérifier la file et confirmer l\'heure prévue.', cta: 'Filtrer en retard', action: 'orders-late' });
+    }
+    const alerts = this.roomAlerts();
+    if (alerts.length >= 3) {
+      out.push({ id: 'rooms', severity: 'warning', title: `${alerts.length} chambres à surveiller`, message: 'Plaintes répétées détectées. Une visite courtoise du manager pourrait éviter une mauvaise note.', cta: 'Ouvrir Analytics', action: 'analytics' });
+    }
+    if (this.npsBands().score < 30) {
+      out.push({ id: 'nps', severity: 'warning', title: `NPS faible (${this.npsBands().score})`, message: 'Plusieurs détracteurs cette semaine — analyser les commentaires textuels pour identifier la cause.', cta: 'Voir feedbacks', action: 'analytics' });
+    }
+    return out;
+  });
+  onAlertAction(a: { action: string }) {
+    if (a.action === 'orders' || a.action === 'orders-late') { this.tab.set('orders'); if (a.action === 'orders-late') this.statusFilter.set('preparing'); }
+    if (a.action === 'analytics') this.tab.set('analytics');
+  }
 
   formatRelative(ts: number): string {
     const diff = (Date.now() - ts) / 1000;

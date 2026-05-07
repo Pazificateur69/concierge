@@ -15,7 +15,7 @@ import './styles/global.css';
 // === Build version for cache-busting ===
 // Bump this when you ship a breaking client change so old PWA instances
 // detect the mismatch and self-clear.
-const BUILD_VERSION = 'v4-2026-05-07.2';
+const BUILD_VERSION = 'v4-2026-05-07.3';
 const STORED_VERSION = localStorage.getItem('concierge_build_version');
 
 async function ensureFreshClient() {
