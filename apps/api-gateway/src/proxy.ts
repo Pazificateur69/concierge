@@ -33,8 +33,10 @@ export function setupProxies(app: Application) {
     return envValue || `http://localhost:${localPort}`;
   }
 
+  // /auth is intentionally NOT proxied — the gateway hosts AuthFallbackController
+  // because the dedicated auth-service is unreliable on Render free tier.
+  // To re-enable upstream proxying for /auth, simply add the line back here.
   const routes: RouteConfig[] = [
-    { prefix: '/auth',    target: resolveTarget(process.env.SERVICE_AUTH_URL,    'https://concierge-auth.onrender.com',    3001) },
     { prefix: '/tenants', target: resolveTarget(process.env.SERVICE_TENANT_URL,  'https://concierge-tenant.onrender.com',  3007) },
     { prefix: '/content', target: resolveTarget(process.env.SERVICE_CONTENT_URL, 'https://concierge-content.onrender.com', 3002) },
     { prefix: '/orders',  target: resolveTarget(process.env.SERVICE_ORDERS_URL,  'https://concierge-orders.onrender.com',  3003) },
