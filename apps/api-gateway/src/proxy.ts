@@ -46,6 +46,21 @@ export function setupProxies(app: Application) {
   // eslint-disable-next-line no-console
   console.log('[proxy] resolved upstream targets:\n' + routes.map(r => `  ${r.prefix.padEnd(10)} → ${r.target}`).join('\n'));
 
+  // Socket.IO transport lives at /socket.io and is hosted by orders-service
+  // (WebSocketGateway with namespace '/concierge'). Proxy it through so the
+  // reception app can connect via the gateway like every other endpoint.
+  const ordersTarget = routes.find((r) => r.prefix === '/orders')!.target;
+  app.use(
+    '/socket.io',
+    createProxyMiddleware({
+      target: ordersTarget,
+      changeOrigin: true,
+      ws: true,
+      proxyTimeout: 90_000,
+      timeout: 90_000,
+    }) as any,
+  );
+
   for (const route of routes) {
     app.use(
       route.prefix,

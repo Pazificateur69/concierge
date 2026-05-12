@@ -3,10 +3,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { TenantController } from './tenant.controller';
 import { TenantService } from './tenant.service';
 import { Tenant, TenantSchema } from './tenant.schema';
+import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: Tenant.name, schema: TenantSchema }])],
   controllers: [TenantController],
-  providers: [TenantService],
+  providers: [TenantService, JwtStrategy],
 })
 export class TenantModule {}
