@@ -49,6 +49,8 @@ export function setupProxies(app: Application) {
   // Socket.IO transport lives at /socket.io and is hosted by orders-service
   // (WebSocketGateway with namespace '/concierge'). Proxy it through so the
   // reception app can connect via the gateway like every other endpoint.
+  // Express strips the '/socket.io' mount prefix before invoking the middleware,
+  // so we re-prepend it via pathRewrite — otherwise upstream sees '/?EIO=...'.
   const ordersTarget = routes.find((r) => r.prefix === '/orders')!.target;
   app.use(
     '/socket.io',
@@ -58,6 +60,7 @@ export function setupProxies(app: Application) {
       ws: true,
       proxyTimeout: 90_000,
       timeout: 90_000,
+      pathRewrite: (path) => `/socket.io${path}`,
     }) as any,
   );
 
