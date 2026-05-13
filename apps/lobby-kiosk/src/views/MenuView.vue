@@ -217,7 +217,7 @@ const filteredItemsV4 = computed(() => {
               </div>
             </article>
 
-            <article v-for="it in filteredItemsV4" :key="it.id" class="item">
+            <article v-for="it in filteredItemsV4" :key="it.id" class="item" @click="add(it)" tabindex="0" role="button" :aria-label="`Ajouter ${itemName(it)}`" @keydown.enter.prevent="add(it)" @keydown.space.prevent="add(it)">
               <div class="item__image">
                 <img :src="imageFor(it)" :alt="itemName(it)" loading="lazy" />
                 <span v-if="popularItemIds.includes(it.id)" class="item__badge item__badge--popular">★ Populaire</span>
@@ -232,12 +232,12 @@ const filteredItemsV4 = computed(() => {
                   <span class="item__price serif">
                     {{ it.price > 0 ? `${it.price.toFixed(2)} €` : 'Inclus' }}
                   </span>
-                  <div class="qty" v-if="cart[it.id]">
-                    <button class="qty__btn" @click="remove(it)" aria-label="Retirer"><Icon name="minus" :size="14" /></button>
+                  <div class="qty" v-if="cart[it.id]" @click.stop>
+                    <button class="qty__btn" @click.stop="remove(it)" aria-label="Retirer"><Icon name="minus" :size="14" /></button>
                     <span class="qty__num">{{ cart[it.id] }}</span>
-                    <button class="qty__btn" @click="add(it)" aria-label="Ajouter"><Icon name="plus" :size="14" /></button>
+                    <button class="qty__btn" @click.stop="add(it)" aria-label="Ajouter"><Icon name="plus" :size="14" /></button>
                   </div>
-                  <button v-else class="add-btn" @click="add(it)">
+                  <button v-else class="add-btn" @click.stop="add(it)">
                     Ajouter <Icon name="plus" :size="13" />
                   </button>
                 </div>
@@ -386,8 +386,12 @@ const filteredItemsV4 = computed(() => {
   border: 1px solid var(--c-border);
   display: flex; flex-direction: column;
   transition: all var(--dur-base);
+  cursor: pointer;
+  user-select: none;
 }
-.item:hover { border-color: var(--c-ink); transform: translateY(-2px); }
+.item:hover { border-color: var(--c-ink); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(20,32,46,0.08); }
+.item:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.item:active { transform: translateY(0); }
 
 .item__image { aspect-ratio: 4 / 3; overflow: hidden; background: var(--c-paper); }
 .item__image img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--dur-slow); }
