@@ -10,14 +10,14 @@
   },
   "dependencies": {
     "@concierge/types": "workspace:*",
-    "@ionic/vue": "^8.3.0",
-    "@ionic/vue-router": "^8.3.0",
+    "@ionic/vue": "^8.8.6",
+    "@ionic/vue-router": "^8.8.6",
     "axios": "^1.7.4",
     "ionicons": "^7.4.0",
     "pinia": "^2.2.2",
-    "vue": "^3.5.0",
-    "vue-i18n": "^9.14.0",
-    "vue-router": "^4.4.0"
+    "vue": "^3.5.34",
+    "vue-i18n": "^11.4.2",
+    "vue-router": "^5.0.6"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.2",
