@@ -163,6 +163,13 @@ pnpm dev
 
 ## 📚 Documentation
 
+**Production / hébergement** :
+- [LIVE.md](./LIVE.md) — Index rapide de toutes les URLs prod
+- [docs/HOSTING.md](./docs/HOSTING.md) — Carte complète de l'hébergement (Render, Vercel, Atlas, env vars, secrets)
+- [docs/SERVICES.md](./docs/SERVICES.md) — Catalogue détaillé de chaque service et tous ses endpoints
+- [docs/RUNBOOK.md](./docs/RUNBOOK.md) — Opérations courantes (réveil, redeploy, rotation secrets, troubleshooting)
+
+**Conception** :
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — Stack complète + diagramme ASCII + responsabilités par couche
 - [DECISIONS.md](./DECISIONS.md) — 17 ADRs (monorepo, multi-tenant, gateway, JWT, charts, no-AI, webhooks, design tokens, healthz partagé…)
 - [docs/data-model.md](./docs/data-model.md) — Schémas collections MongoDB + DBML pour [dbdiagram.io](https://dbdiagram.io)
@@ -173,14 +180,18 @@ pnpm dev
 
 ## 🌐 Déploiement live
 
-| Service | URL | Hébergeur |
-|---------|-----|-----------|
-| API Gateway | `https://concierge-api.onrender.com` | Render |
-| Borne Lobby (Royal Lyon) | `https://concierge-lobby.vercel.app/?tenant=royal-lyon` | Vercel |
-| Borne Lobby (Côte d'Azur) | `https://concierge-lobby.vercel.app/?tenant=cote-azur` | Vercel |
-| Smiley | `https://concierge-smiley.vercel.app` | Vercel |
-| Admin | `https://concierge-admin.vercel.app` | Vercel |
-| Réception | `https://concierge-reception.vercel.app` | Vercel |
+Référence à jour dans [LIVE.md](./LIVE.md). Résumé :
+
+| Service                | URL                                                       | Hébergeur |
+|------------------------|-----------------------------------------------------------|-----------|
+| API Gateway            | https://concierge-gateway.onrender.com                    | Render    |
+| Swagger Docs           | https://concierge-gateway.onrender.com/api/docs           | Render    |
+| Landing publique       | https://concierge-mauve-nine.vercel.app                   | Vercel    |
+| Lobby (Royal Lyon)     | https://concierge-lobby.vercel.app/?tenant=royal-lyon     | Vercel    |
+| Lobby (Côte d'Azur)    | https://concierge-lobby.vercel.app/?tenant=cote-azur      | Vercel    |
+| Smiley                 | https://concierge-smiley.vercel.app                       | Vercel    |
+| Admin                  | https://concierge-admin-gamma.vercel.app                  | Vercel    |
+| Réception              | https://concierge-reception.vercel.app                    | Vercel    |
 
 ---
 
